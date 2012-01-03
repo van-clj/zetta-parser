@@ -8,7 +8,7 @@
   (:require [zetta.seq :as p]))
 
 (deftest fmap-applicative-functor-test
-  (let [a-monad (with-monad parser-m
+  (let [a-monad (with-parser
                   (<$> str (<* p/digit p/space)
                            (<* p/digit p/space)
                            p/end-of-input))

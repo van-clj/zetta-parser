@@ -19,7 +19,7 @@
   (parser input incomplete failure-fn success-fn))
 
 (defn parse-once [parser input]
-  (let [result (parser input incomplete failure-fn success-fn)]
+  (let [result (parse parser input)]
     (if (partial? result)
       (result "")
       result)))
@@ -67,7 +67,7 @@
   (fn [i0 m0 ff sf]
     (if (>= (count i0) n)
       (sf i0 m0 i0)
-      (with-monad parser-m
+      (with-parser
         ((>> demand-input (ensure n)) i0 m0 ff sf)))))
 
 (def get
@@ -79,7 +79,7 @@
     (sf s m0 nil)))
 
 (defn satisfy? [pred]
-  (domonad parser-m
+  (do-parser
     [s     (ensure 1)
      :let  [w (first s)]
      :if (pred w)
@@ -92,7 +92,7 @@
     w))
 
 (defn skip [pred]
-  (domonad parser-m
+  (do-parser
     [s (ensure 1)
      :if (pred (first s))
        :then [_ (put (rest s))]
@@ -100,7 +100,7 @@
      nil))
 
 (defn take-with [n pred]
-  (domonad parser-m
+  (do-parser
     [s (ensure n)
      :let [[h t] (split-at n s)]
      :if (pred h)
@@ -109,17 +109,17 @@
      h))
 
 (defn take [n]
-  (with-monad parser-m
+  (with-parser
     (take-with n (constantly true))))
 
 (defn string [s]
   (let [vecs (vec s)]
-    (with-monad parser-m
+    (with-parser
       (<$> (partial apply str)
            (take-with (count s) #(= vecs %))))))
 
 (defn skip-while [pred]
-  (let [go (domonad parser-m
+  (let [go (do-parser
             [t0 get
              :let [t (drop-while pred t0)]
              _ (put t)
@@ -137,7 +137,7 @@
 (defn take-while [pred]
   (letfn [
     (go [acc]
-      (domonad parser-m
+      (do-parser
         [t0 get
          :let [[h t] (span pred t0)]
          _ (put t)
@@ -150,18 +150,18 @@
            ]
            :else [result (m-result (conj acc h))]]
            result))]
-  (domonad parser-m
+  (do-parser
     [result (go [])]
     (->> result core/reverse (apply core/concat)))))
 
 (defn take-till [pred]
-  (domonad parser-m
-    [result (take-while (complement pred))] result))
+  (with-parser
+    (take-while (complement pred))))
 
 (def take-rest
   (letfn [
     (go [acc]
-      (domonad parser-m
+      (do-parser
         [input want-input?
          :if input
            :then [
@@ -176,7 +176,7 @@
   (go [])))
 
 (defn take-while1 [pred]
-  (domonad parser-m
+  (do-parser
     [input-checker get
      :if (empty? input-checker)
        :then [_ demand-input]
@@ -193,37 +193,37 @@
      result))
 
 (def any-token
-  (with-monad parser-m
+  (with-parser
     (satisfy? (constantly true))))
 
 (defn char [c]
-  (with-monad parser-m
+  (with-parser
     (<?> (satisfy? #(= % c))
          (str c))))
 
 (def letter
-  (with-monad parser-m
+  (with-parser
     (satisfy? #(Character/isLetter %))))
 
 (def digit
-  (with-monad parser-m
+  (with-parser
     (satisfy? #(Character/isDigit %))))
 
 (def number
-  (with-monad parser-m
+  (with-parser
     (<$> (comp #(Integer/parseInt %) #(apply str %))
          (many1 (satisfy? #(Character/isDigit %))))))
 
 (def whitespace
-  (with-monad parser-m
+  (with-parser
     (satisfy? #(Character/isWhitespace %))))
 
 (def space
-  (with-monad parser-m
+  (with-parser
     (satisfy? #(= % \space))))
 
 (defn not-char [c]
-  (with-monad parser-m
+  (with-parser
     (<?> (satisfy? #(complement (= % c)))
          (str "not" c))))
 
@@ -243,11 +243,11 @@
       (ff i0 m0 [] "end-of-input"))))
 
 (def at-end?
-  (with-monad parser-m
+  (with-parser
     (<$> not want-input?)))
 
 (def eol
-  (with-monad parser-m
+  (with-parser
     (<|> (>>= (char \newline) (fn [_]
               (m-result nil)))
          (>>= (string "\r\n")
