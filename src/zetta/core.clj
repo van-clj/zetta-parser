@@ -1,7 +1,7 @@
 (ns zetta.core
   (:use [clojure.algo.monads
          :only
-         [defmonad defmonadfn]]))
+         [defmonad defmonadfn domonad with-monad m-seq]]))
 
 (defrecord ResultDone [remainder result])
 (defrecord ResultFailure [remainder stack msg])
@@ -18,11 +18,6 @@
 (defn complete? [m] (= m complete))
 (defn incomplete? [m] (= m incomplete))
 
-(defn concat-more-input [m1 m2]
-  (cond
-    (complete? m1) complete
-    (complete? m2) complete
-    :else incomplete))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -61,15 +56,30 @@
 (defmonadfn <|> [m1 m2]
   (m-plus m1 m2))
 
-;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser Monad utility functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn concat-more [m1 m2]
+  (cond
+    (complete? m1) complete
+    (complete? m2) complete
+    :else incomplete))
 
 (defn add-parser-stream [i0 m0 i1 m1 f]
-  (f (concat i0 i1) (concat-more-input m0 m1)))
+  (f (concat i0 i1) (concat-more m0 m1)))
 
 (defn fail-parser [msg]
   (fn failed-parser [i0 m0 ff _sf]
     (ff i0 m0 [] (str "Failed reading: " msg))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser Monad implementation
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmonad parser-m
   [ m-result (fn result-fn [a]
@@ -87,8 +97,6 @@
                  (letfn [
                    (new-ff [i1 m1 _ _]
                      (p2 i1 m1 ff sf))]
-                     ;(add-parser-stream i0 m0 i1 m1
-                     ;  (fn [i2 m2] (p2 i2 m2 ff sf))))]
                  (p1 i0 m0 new-ff sf))))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
