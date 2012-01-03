@@ -65,7 +65,7 @@
                  (p/string "hello")
                  "other world")]
     (is (failure? result))
-    (is (= "other world" (:remainder result)))))
+    (is (= (seq "other world") (:remainder result)))))
 
 (deftest skip-while-test
   (let [result (p/parse-once
@@ -115,7 +115,7 @@
 (deftest take-rest-test
   (let [result (p/parse-once p/take-rest "hello world")]
     (is (done? result))
-    (is (= ["hello world"] (:result result)))))
+    (is (= [(seq "hello world")] (:result result)))))
 
 (deftest take-while1-test
   (let [result (p/parse-once
@@ -143,7 +143,7 @@
 (deftest char-no-initial-match-test
   (let [result (p/parse-once (p/char \a) "1bc")]
     (is (failure? result))
-    (is (= "1bc" (:remainder result)))))
+    (is (= (seq "1bc") (:remainder result)))))
 
 (deftest number-test
   (let [result (p/parse-once p/number "123")]

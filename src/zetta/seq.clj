@@ -16,7 +16,7 @@
   (ResultDone. i0 result))
 
 (defn parse [parser input]
-  (parser input incomplete failure-fn success-fn))
+  (parser (seq input) incomplete failure-fn success-fn))
 
 (defn parse-once [parser input]
   (let [result (parse parser input)]
