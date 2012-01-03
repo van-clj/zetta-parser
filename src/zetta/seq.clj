@@ -1,12 +1,13 @@
-(ns attoparsec.bytes.core
-  (:refer-clojure :exclude [ensure get take take-while char])
+(ns zetta.seq
+  (:refer-clojure :exclude [ensure get take take-while char some])
   (:require [clojure.core :as core])
   (:use [clojure.algo.monads
          :only
          [domonad with-monad]])
 
-  (:use attoparsec.core)
-  (:import [attoparsec.core ResultFailure ResultDone]))
+  (:use zetta.core)
+  (:use zetta.combinators)
+  (:import [zetta.core ResultFailure ResultDone]))
 
 (defn failure-fn [i0 _m0 stack msg]
   (ResultFailure. i0 stack msg))
@@ -17,8 +18,16 @@
 (defn parse [parser input]
   (parser input incomplete failure-fn success-fn))
 
+(defn parse-once [parser input]
+  (let [result (parser input incomplete failure-fn success-fn)]
+    (if (partial? result) 
+      (result "")
+      result)))
+
 (defn span [pred xs]
   ((core/juxt #(core/take-while pred %) #(core/drop-while pred %)) xs))
+
+;;;;;;;;;;;;;;;;;;;;
 
 (defn <?> [p err-msg]
   (fn [i0 m0 ff sf]
@@ -26,14 +35,6 @@
       (new-ff [i0 m0 errors msg] (ff i0 m0 (conj errors err-msg) msg))]
     (p i0 m0 new-ff sf))))
 
-
-(defn <|> 
-  ([p1] p1)
-  ([p1 & more] 
-    (with-monad parser-m
-      (let [p2 (core/first more)
-            p3 (m-plus p1 p2)]
-      (apply <|> (cons p3 (rest more)))))))
 
 (defn prompt [i0 _m0 ff sf]
   (fn [s]
@@ -67,7 +68,7 @@
     (if (>= (count i0) n)
       (sf i0 m0 i0)
       (with-monad parser-m
-        ((m-bind demand-input #(ensure n)) i0 m0 ff sf)))))
+        ((>> demand-input (ensure n)) i0 m0 ff sf)))))
 
 (def get
   (fn [i0 m0 _ff sf]
@@ -198,6 +199,25 @@
   (domonad parser-m
     [result (<?> (satisfy? #(= % c)) (str c))] result))
 
+(def letter
+  (with-monad parser-m
+    (>>= (satisfy? #(Character/isLetter %))
+         m-result)))
+
+(def digit
+  (with-monad parser-m
+    (>>= (satisfy? #(Character/isDigit %))
+         m-result)))
+
+(def number
+  (with-monad parser-m
+    (<$> (comp #(Integer/parseInt %) #(apply str %))
+         (many1 (satisfy? #(Character/isDigit %))))))
+
+(def space
+  (with-monad parser-m
+    (satisfy? #(= % \space))))
+
 (defn not-char [c]
   (domonad parser-m
     [result (<?> (satisfy? #(complement (= % c)))
@@ -225,7 +245,9 @@
 
 (def eol
   (with-monad parser-m
-    (m-plus (m-bind (char \newline) (fn [_] (m-result nil)))
-            (m-bind (string "\r\n") (fn [_] (m-result nil))))))
+    (<|> (>>= (char \newline) (fn [_]
+              (m-result nil)))
+         (>>= (string "\r\n")
+              (fn [_] (m-result nil))))))
 
 
