@@ -24,29 +24,35 @@
     (complete? m2) complete
     :else incomplete))
 
-;; Monad implementation for the parser
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Monad & Applicative utility functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Haskell like operators
 
 (defmonadfn >>= [m1 f]
   (m-bind m1 f))
 
-(defmacro >> [m1 m2]
-  `(>>= ~m1 (fn [~'_] ~m2)))
+(defn- bind-ignore-step [mresult m1]
+  `(>>= ~mresult (fn [~'_]
+   ~m1)))
 
-(defmacro *> [m1 m2]
-  `(>>= ~m1 (fn [~'_] ~m2)))
+(defmacro >> [& more]
+  (reduce bind-ignore-step more))
 
-(defmonadfn <* [a1 a2]
-  (>>= a1 (fn [a1v]
-  (>>= a2 (fn [_]
-  (m-result a1v))))))
+;; Haskell Applicative operators
 
-(defmonadfn m-seq
-  [steps]
-  (if (empty? steps)
-    (m-result [])
-    (>>= (first steps) (fn [h]
-    (>>= (m-seq (rest steps)) (fn [t]
-    (m-result (cons h t))))))))
+(defmacro *> [& more]
+  `(>> ~@more))
+
+(defmacro <* [& more]
+  (let [step (first more)
+        steps (rest more)]
+  `(>>= ~step (fn [~'result#]
+   (>> ~(reduce bind-ignore-step steps)
+        (~'m-result ~'result#))))))
 
 (defmonadfn <$> [f & more]
   (>>= (m-seq more) (fn [params]
