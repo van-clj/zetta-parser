@@ -85,3 +85,14 @@
                      ;  (fn [i2 m2] (p2 i2 m2 ff sf))))]
                  (p1 i0 m0 new-ff sf))))])
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser building macros
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmacro with-parser [& forms]
+  `(with-monad parser-m ~@forms))
+
+(defmacro do-parser [steps result]
+  `(domonad parser-m ~steps ~result))
