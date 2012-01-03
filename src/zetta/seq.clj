@@ -20,7 +20,7 @@
 
 (defn parse-once [parser input]
   (let [result (parser input incomplete failure-fn success-fn)]
-    (if (partial? result) 
+    (if (partial? result)
       (result "")
       result)))
 
@@ -109,13 +109,14 @@
      h))
 
 (defn take [n]
-  (domonad parser-m
-    [result (take-with n (constantly true))] result))
+  (with-monad parser-m
+    (take-with n (constantly true))))
 
 (defn string [s]
   (let [vecs (vec s)]
-    (domonad parser-m
-      [result (take-with (count s) #(= vecs %))] result)))
+    (with-monad parser-m
+      (<$> (partial apply str)
+           (take-with (count s) #(= vecs %))))))
 
 (defn skip-while [pred]
   (let [go (domonad parser-m
@@ -174,7 +175,7 @@
           result))]
   (go [])))
 
-(defn take-while-1 [pred]
+(defn take-while1 [pred]
   (domonad parser-m
     [input-checker get
      :if (empty? input-checker)
@@ -192,37 +193,39 @@
      result))
 
 (def any-token
-  (domonad parser-m
-    [result (satisfy? (constantly true))] result))
+  (with-monad parser-m
+    (satisfy? (constantly true))))
 
 (defn char [c]
-  (domonad parser-m
-    [result (<?> (satisfy? #(= % c)) (str c))] result))
+  (with-monad parser-m
+    (<?> (satisfy? #(= % c))
+         (str c))))
 
 (def letter
   (with-monad parser-m
-    (>>= (satisfy? #(Character/isLetter %))
-         m-result)))
+    (satisfy? #(Character/isLetter %))))
 
 (def digit
   (with-monad parser-m
-    (>>= (satisfy? #(Character/isDigit %))
-         m-result)))
+    (satisfy? #(Character/isDigit %))))
 
 (def number
   (with-monad parser-m
     (<$> (comp #(Integer/parseInt %) #(apply str %))
          (many1 (satisfy? #(Character/isDigit %))))))
 
+(def whitespace
+  (with-monad parser-m
+    (satisfy? #(Character/isWhitespace %))))
+
 (def space
   (with-monad parser-m
     (satisfy? #(= % \space))))
 
 (defn not-char [c]
-  (domonad parser-m
-    [result (<?> (satisfy? #(complement (= % c)))
-                           (str "not" c))]
-    result))
+  (with-monad parser-m
+    (<?> (satisfy? #(complement (= % c)))
+         (str "not" c))))
 
 (def end-of-input
   (fn [i0 m0 ff sf]
@@ -240,8 +243,8 @@
       (ff i0 m0 [] "end-of-input"))))
 
 (def at-end?
-  (domonad parser-m
-    [input want-input?] (not input)))
+  (with-monad parser-m
+    (<$> not want-input?)))
 
 (def eol
   (with-monad parser-m
