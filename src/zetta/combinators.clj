@@ -3,8 +3,13 @@
   (:require [clojure.core :as core])
   (:use [clojure.algo.monads :only [m-seq]])
 
-  (:use zetta.core)
-  (:import [zetta.core ResultDone ResultFailure]))
+  (:use zetta.core))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser combinators
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn <?>
   "Allows to add an error message to a given parser p."
