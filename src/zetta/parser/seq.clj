@@ -8,40 +8,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Continuation Results
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn failure-fn [i0 _m0 stack msg]
-  (ResultFailure. i0 stack msg))
-
-(defn success-fn [i0 _m0 result]
-  (ResultDone. i0 result))
-
-; This is used for continuations (when there is not enough input)
-(defn prompt [i0 _m0 ff sf]
-  (fn [s]
-    (if (empty? s)
-      (ff i0 complete)
-      (sf (concat i0 (seq s)) incomplete))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; Parsing functions
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn parse [parser input]
-  (parser (seq input) incomplete failure-fn success-fn))
-
-(defn parse-once [parser input]
-  (let [result (parse parser input)]
-    (if (partial? result)
-      (result "")
-      result)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
 ;; Utility Functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
