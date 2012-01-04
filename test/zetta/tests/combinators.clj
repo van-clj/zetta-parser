@@ -43,6 +43,21 @@
                  "@&3bc2f")]
   (is (failure? result))))
 
+(deftest replicate-test
+  (let [result (parse-once
+                 (c/replicate 5 p/digit)
+                 "123456")]
+  (is (done? result))
+  (is (= [\1 \2 \3 \4 \5] (:result result))
+  (is (= [\6] (:remainder result))))))
+
+(deftest replicate-no-initial-match-test
+  (let [result (parse-once
+                 (c/replicate 5 p/digit)
+                 "1234abc")]
+  (is (failure? result))
+  (is (= [\a \b \c] (:remainder result)))))
+
 (deftest option-test
   (let [result (parse-once
                  (c/option \y p/letter)
@@ -74,7 +89,7 @@
   (is (= [] (:result result)))))
 
 (deftest many-till-test
-  (let [result (parse-once 
+  (let [result (parse-once
                  (c/many-till p/letter (p/char \@))
                  "hello@domain.com")]
   (is (= [\h \e \l \l \o] (:result result)))))
@@ -86,3 +101,29 @@
   (is (done? result))
   (is (= [] (:result result)))))
 
+(deftest skip-many-test
+  (let [result (parse-once
+                (c/skip-many p/letter)
+                "abc123")]
+  (is (done? result))
+  (is (= [\1 \2 \3] (:remainder result)))))
+
+(deftest skip-many-no-initial-match-test
+  (let [result (parse-once
+                (c/skip-many p/letter)
+                "123")]
+  (is (done? result))
+  (is (= [\1 \2 \3] (:remainder result)))))
+
+(deftest skip-many1-test
+  (let [result (parse-once
+                (c/skip-many1 p/letter)
+                "abc123")]
+  (is (done? result))
+  (is (= [\1 \2 \3] (:remainder result)))))
+
+(deftest skip-many1-no-initial-match-test
+  (let [result (parse-once
+                (c/skip-many1 p/letter)
+                "123")]
+  (is (failure? result))))

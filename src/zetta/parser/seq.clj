@@ -1,5 +1,6 @@
 (ns zetta.parser.seq
-  (:refer-clojure :exclude [ensure get take take-while char some])
+  (:refer-clojure 
+   :exclude [ensure get take take-while char some replicate])
   (:require [clojure.core :as core])
 
   (:use zetta.core)
