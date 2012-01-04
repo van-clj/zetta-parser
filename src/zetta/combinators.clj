@@ -7,6 +7,13 @@
   (:use zetta.core)
   (:import [zetta.core ResultDone ResultFailure]))
 
+(defn <?> [p err-msg]
+  (fn [i0 m0 ff sf]
+    (letfn [
+      (new-ff [i0 m0 errors msg]
+        (ff i0 m0 (conj errors err-msg) msg))]
+    (p i0 m0 new-ff sf))))
+
 (declare many-v)
 
 (defn- some-v [p]
@@ -55,3 +62,4 @@
          (>>= p (fn [h]
          (>>= (many-till p end) (fn [t]
          (m-result (cons h t)))))))))
+
