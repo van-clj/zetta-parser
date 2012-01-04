@@ -4,8 +4,7 @@
   (:require [clojure.core :as core])
 
   (:use zetta.core)
-  (:use zetta.combinators)
-  (:import [zetta.core ResultFailure ResultDone]))
+  (:use zetta.combinators))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
