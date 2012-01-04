@@ -12,6 +12,6 @@
                   (<$> str (<* p/digit p/space)
                            (<* p/digit p/space)
                            p/end-of-input))
-        result  (p/parse-once a-monad "4 4 ")]
+        result  (parse-once a-monad "4 4 ")]
     (is (= "44" (:result result)))))
 
