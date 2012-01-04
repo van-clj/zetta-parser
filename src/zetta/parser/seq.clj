@@ -1,4 +1,4 @@
-(ns zetta.seq
+(ns zetta.parser.seq
   (:refer-clojure :exclude [ensure get take take-while char some])
   (:require [clojure.core :as core])
   (:use [clojure.algo.monads
@@ -9,11 +9,30 @@
   (:use zetta.combinators)
   (:import [zetta.core ResultFailure ResultDone]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Continuation Results
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn failure-fn [i0 _m0 stack msg]
   (ResultFailure. i0 stack msg))
 
 (defn success-fn [i0 _m0 result]
   (ResultDone. i0 result))
+
+; This is used for continuations (when there is not enough input)
+(defn prompt [i0 _m0 ff sf]
+  (fn [s]
+    (if (empty? s)
+      (ff i0 complete)
+      (sf (concat i0 (seq s)) incomplete))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parsing functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn parse [parser input]
   (parser (seq input) incomplete failure-fn success-fn))
@@ -24,23 +43,20 @@
       (result "")
       result)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Utility Functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn span [pred xs]
   ((core/juxt #(core/take-while pred %) #(core/drop-while pred %)) xs))
 
-;;;;;;;;;;;;;;;;;;;;
-
-(defn <?> [p err-msg]
-  (fn [i0 m0 ff sf]
-    (letfn [
-      (new-ff [i0 m0 errors msg] (ff i0 m0 (conj errors err-msg) msg))]
-    (p i0 m0 new-ff sf))))
-
-
-(defn prompt [i0 _m0 ff sf]
-  (fn [s]
-    (if (empty? s)
-      (ff i0 complete)
-      (sf (concat i0 s) incomplete))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Basic Parsers
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def demand-input
   (fn [i0 m0 ff sf]
@@ -107,6 +123,12 @@
        :then [_ (put t)]
        :else [_ (fail-parser "take-with")]]
      h))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; High Level Parsers
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn take [n]
   (with-parser
@@ -201,6 +223,11 @@
     (<?> (satisfy? #(= % c))
          (str c))))
 
+(defn not-char [c]
+  (with-parser
+    (<?> (satisfy? #(complement (= % c)))
+         (str "not" c))))
+
 (def letter
   (with-parser
     (satisfy? #(Character/isLetter %))))
@@ -212,7 +239,7 @@
 (def number
   (with-parser
     (<$> (comp #(Integer/parseInt %) #(apply str %))
-         (many1 (satisfy? #(Character/isDigit %))))))
+         (many1 digit))))
 
 (def whitespace
   (with-parser
@@ -221,11 +248,6 @@
 (def space
   (with-parser
     (satisfy? #(= % \space))))
-
-(defn not-char [c]
-  (with-parser
-    (<?> (satisfy? #(complement (= % c)))
-         (str "not" c))))
 
 (def end-of-input
   (fn [i0 m0 ff sf]
@@ -248,9 +270,7 @@
 
 (def eol
   (with-parser
-    (<|> (>>= (char \newline) (fn [_]
-              (m-result nil)))
-         (>>= (string "\r\n")
-              (fn [_] (m-result nil))))))
+    (<|> (*> (char \newline) (m-result nil))
+         (*> (string "\r\n") (m-result nil)))))
 
 

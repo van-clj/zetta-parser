@@ -5,7 +5,7 @@
          [with-monad]])
 
   (:use zetta.core)
-  (:require [zetta.seq :as p]))
+  (:require [zetta.parser.seq :as p]))
 
 (deftest fmap-applicative-functor-test
   (let [a-monad (with-parser

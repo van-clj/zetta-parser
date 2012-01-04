@@ -2,7 +2,7 @@
   (:use clojure.test)
 
   (:use zetta.core)
-  (:require [zetta.seq :as p]
+  (:require [zetta.parser.seq :as p]
             [zetta.combinators :as c]))
 
 (deftest many-test

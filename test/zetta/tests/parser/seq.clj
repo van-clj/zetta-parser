@@ -1,7 +1,8 @@
-(ns zetta.tests.seq
+(ns zetta.tests.parser.seq
   (:use clojure.test)
+
   (:use zetta.core)
-  (:require [zetta.seq :as p]))
+  (:require [zetta.parser.seq :as p]))
 
 
 (deftest satisfy?-test
