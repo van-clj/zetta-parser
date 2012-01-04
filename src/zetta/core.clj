@@ -3,21 +3,36 @@
          :only
          [defmonad defmonadfn domonad with-monad m-seq]]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser result types
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defrecord ResultDone [remainder result])
 (defrecord ResultFailure [remainder stack msg])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser result query functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def partial? fn?)
 (defn done? [result] (= (type result) ResultDone))
 (defn failure? [result] (= (type result) ResultFailure))
 
-;; Parser completion constants
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Parser more-input constants
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def complete ::complete)
 (def incomplete ::incomplete)
 
 (defn complete? [m] (= m complete))
 (defn incomplete? [m] (= m incomplete))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -62,7 +77,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn concat-more [m1 m2]
+(defn- concat-more [m1 m2]
   (cond
     (complete? m1) complete
     (complete? m2) complete
@@ -110,3 +125,4 @@
 
 (defmacro do-parser [steps result]
   `(domonad parser-m ~steps ~result))
+
