@@ -1,8 +1,5 @@
 (ns zetta.combinators
   (:refer-clojure :exclude [some])
-  (:use [clojure.algo.monads
-         :only
-         [domonad with-monad]])
 
   (:use zetta.core)
   (:import [zetta.core ResultDone ResultFailure]))

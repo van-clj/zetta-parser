@@ -1,9 +1,6 @@
 (ns zetta.parser.seq
   (:refer-clojure :exclude [ensure get take take-while char some])
   (:require [clojure.core :as core])
-  (:use [clojure.algo.monads
-         :only
-         [domonad with-monad]])
 
   (:use zetta.core)
   (:use zetta.combinators)
