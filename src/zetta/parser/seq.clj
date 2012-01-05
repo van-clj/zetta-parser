@@ -1,5 +1,5 @@
 (ns zetta.parser.seq
-  (:refer-clojure 
+  (:refer-clojure
    :exclude [ensure get take take-while char some replicate])
   (:require [clojure.core :as core])
 
@@ -12,7 +12,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn span [pred xs]
+(defn- span [pred xs]
   ((core/juxt #(core/take-while pred %) #(core/drop-while pred %)) xs))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -22,6 +22,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def demand-input
+  "Basic parser that will ensure the request of more
+   input via a continuation."
   (fn [i0 m0 ff sf]
     (if (complete? m0)
       (ff i0 m0 ["demand-input"] "not enough input")
@@ -33,6 +35,9 @@
       (prompt i0 m0 new-ff new-sf)))))
 
 (def want-input?
+  "This parser always succeeds.  It returns 'true' if any
+   input is available either immediately or on demand, and
+   'false' if the end of all input has been reached."
   (fn [i0 m0 _ff sf]
     (cond
       (not (empty? i0)) (sf i0 m0 true)
@@ -42,22 +47,29 @@
                 (new-sf [i m] (sf i m true))]
         (prompt i0 m0 new-ff new-sf)))))
 
-(defn ensure [n]
+(defn ensure
+  "If at least 'n' items of input are available, return the current
+  input, otherwise fail."
+  [n]
   (fn [i0 m0 ff sf]
     (if (>= (count i0) n)
       (sf i0 m0 i0)
       (with-parser
         ((>> demand-input (ensure n)) i0 m0 ff sf)))))
 
-(def get
+(def ^:private get
   (fn [i0 m0 _ff sf]
     (sf i0 m0 i0)))
 
-(defn put [s]
+(defn- put [s]
   (fn [_i0 m0 _ff sf]
     (sf s m0 nil)))
 
-(defn satisfy? [pred]
+(defn satisfy?
+  "The parser 'satisfy pred' succeeds for any item for which the
+   predicate 'pred' returns 'true'. Returns the item that is actually
+   parsed."
+  [pred]
   (do-parser
     [s     (ensure 1)
      :let  [w (first s)]
@@ -70,7 +82,10 @@
        ]]
     w))
 
-(defn skip [pred]
+(defn skip
+  "The parser 'skip pred' succeeds for any item for which the predicate
+   'pred' returns 'true'."
+  [pred]
   (do-parser
     [s (ensure 1)
      :if (pred (first s))
@@ -78,7 +93,10 @@
        :else [_ (fail-parser "skip")]]
      nil))
 
-(defn take-with [n pred]
+(defn take-with
+  "Consume 'n' items of input, but succeed only if the predicate
+  'pred' returns 'true'."
+  [n pred]
   (do-parser
     [s (ensure n)
      :let [[h t] (split-at n s)]
@@ -93,17 +111,25 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn take [n]
+(defn take
+  "Consume exactly 'n' items from input."
+  [n]
   (with-parser
     (take-with n (constantly true))))
 
-(defn string [s]
+(defn string
+  "Parses a sequence of items that identically match
+   a given string 's'. Returns the parsed string.  This parser
+   consumes no input if it fails (even if a partial match)."
+  [s]
   (let [vecs (vec s)]
     (with-parser
       (<$> (partial apply str)
            (take-with (count s) #(= vecs %))))))
 
-(defn skip-while [pred]
+(defn skip-while
+  "A parser that skips input for as long as 'pred' returns 'true'."
+  [pred]
   (let [go (do-parser
             [t0 get
              :let [t (drop-while pred t0)]
@@ -119,7 +145,17 @@
              nil)]
      go))
 
-(defn take-while [pred]
+(defn take-while
+  "Consume input as long as pred returns 'true', and return
+   the consumed input.
+
+   This parser does not fail.  It will return an empty seq if the
+   predicate returns 'false' on the first token of input.
+
+   Note: Because this parser does not fail, do not use it with
+   combinators such as 'many', because such parsers loop until a
+   failure occurs.  Careless use will thus result in an infinite loop."
+  [pred]
   (letfn [
     (go [acc]
       (do-parser
@@ -139,11 +175,25 @@
     [result (go [])]
     (->> result core/reverse (apply core/concat)))))
 
-(defn take-till [pred]
+(defn take-till
+  "Consume input as long as 'pred' returns 'false'
+  (i.e. until it returns 'true'), and return the consumed input.
+
+  This parser does not fail.  It will return an empty seq if the
+  predicate returns 'true' on the first item from the input.
+
+  Note: Because this parser does not fail, do not use it with
+  combinators such as 'many', because such parsers loop until a
+  failure occurs.  Careless use will thus result in an infinite loop."
+  [pred]
   (with-parser
     (take-while (complement pred))))
 
 (def take-rest
+  "Returns the rest of the seqs that are given to the parser,
+  the result will be a seqs of seqs where the number of seqs
+  from the first level will represent the number of times a
+  continuation was used to continue the parse process."
   (letfn [
     (go [acc]
       (do-parser
@@ -160,7 +210,12 @@
           result))]
   (go [])))
 
-(defn take-while1 [pred]
+(defn take-while1
+  "Consume input as long as pred returns 'true', and return
+   the consumed input.
+
+   This parser will fail if a first match is not accomplished."
+  [pred]
   (do-parser
     [input-checker get
      :if (empty? input-checker)
@@ -178,41 +233,61 @@
      result))
 
 (def any-token
+  "Parser that matches any element from the input seq, it
+  will return the parsed element from the seq."
   (with-parser
     (satisfy? (constantly true))))
 
-(defn char [c]
+(defn char
+  "Parser that matches only a token that is equal to character
+  'c', this character is returned."
+  [c]
   (with-parser
     (<?> (satisfy? #(= % c))
          (str c))))
 
-(defn not-char [c]
+(defn not-char
+  "Parser that matches only a token that is not equal to character
+  'c', this character is returned."
+  [c]
   (with-parser
     (<?> (satisfy? #(complement (= % c)))
          (str "not" c))))
 
 (def letter
+  "Parser that matches any character that is considered a letter,
+  it uses 'Character/isLetter' internally."
   (with-parser
     (satisfy? #(Character/isLetter %))))
 
 (def digit
+  "Parser that matches any character that is considered a digit,
+  it uses 'Character/isDigit' internally."
   (with-parser
     (satisfy? #(Character/isDigit %))))
 
 (def number
+  "Parser that matches a many characters (at least one) that are digits,
+  and returns the number parsed in base 10."
   (with-parser
     (<$> (comp #(Integer/parseInt %) #(apply str %))
          (many1 digit))))
 
 (def whitespace
+  "Parser that matches any character that is considered a whitespace,
+  it uses 'Character/isWhitespace' internally."
   (with-parser
     (satisfy? #(Character/isWhitespace %))))
 
 (def space
+  "Parser that matches any character that is equal to the character
+  \\space."
   (with-parser
-    (satisfy? #(= % \space))))
+    (char \space)))
 
 (def end-of-input
+  "Matches only when the end-of-input has been reached, otherwise
+  it fails. This parser returns a nil value."
   (fn [i0 m0 ff sf]
     (if (empty? i0)
       (if (complete? m0)
@@ -228,10 +303,13 @@
       (ff i0 m0 [] "end-of-input"))))
 
 (def at-end?
+  "Parser that never fails, it returns 'true' when the end-of-input
+  is reached, 'false' otherwise."
   (with-parser
     (<$> not want-input?)))
 
 (def eol
+  "Parser that matches different end-of-line characters/sequences."
   (with-parser
     (<|> (*> (char \newline) (m-result nil))
          (*> (string "\r\n") (m-result nil)))))
