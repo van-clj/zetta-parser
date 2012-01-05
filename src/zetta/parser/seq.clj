@@ -94,8 +94,9 @@
      nil))
 
 (defn take-with
-  "Consume 'n' items of input, but succeed only if the predicate
-  'pred' returns 'true'."
+  "Matches 'n' items of input, but succeed only if the predicate
+  'pred' returns 'true' on the parsed input. The matched input is returned
+  as a seq."
   [n pred]
   (do-parser
     [s (ensure n)
@@ -112,7 +113,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn take
-  "Consume exactly 'n' items from input."
+  "Matches exactly 'n' items from input. Returnes the matched input as a seq."
   [n]
   (with-parser
     (take-with n (constantly true))))
@@ -120,7 +121,7 @@
 (defn string
   "Parses a sequence of items that identically match
    a given string 's'. Returns the parsed string.  This parser
-   consumes no input if it fails (even if a partial match)."
+   consumes no input if it fails (even with a partial match)."
   [s]
   (let [vecs (vec s)]
     (with-parser
@@ -146,8 +147,8 @@
      go))
 
 (defn take-while
-  "Consume input as long as pred returns 'true', and return
-   the consumed input.
+  "Matches input as long as pred returns 'true', and return
+   the consumed input as a seq.
 
    This parser does not fail.  It will return an empty seq if the
    predicate returns 'false' on the first token of input.
@@ -176,8 +177,8 @@
     (->> result core/reverse (apply core/concat)))))
 
 (defn take-till
-  "Consume input as long as 'pred' returns 'false'
-  (i.e. until it returns 'true'), and return the consumed input.
+  "Matches input as long as 'pred' returns 'false'
+  (i.e. until it returns 'true'), and returns the consumed input as a seq.
 
   This parser does not fail.  It will return an empty seq if the
   predicate returns 'true' on the first item from the input.
@@ -211,8 +212,8 @@
   (go [])))
 
 (defn take-while1
-  "Consume input as long as pred returns 'true', and return
-   the consumed input.
+  "Matches input as long as pred returns 'true'. This parser returns
+   the consumed input in a seq.
 
    This parser will fail if a first match is not accomplished."
   [pred]
@@ -233,55 +234,58 @@
      result))
 
 (def any-token
-  "Parser that matches any element from the input seq, it
+  "Matches any element from the input seq, it
   will return the parsed element from the seq."
   (with-parser
     (satisfy? (constantly true))))
 
 (defn char
-  "Parser that matches only a token that is equal to character
-  'c', this character is returned."
+  "Matches only a token that is equal to character
+  'c', the character is returned."
   [c]
   (with-parser
     (<?> (satisfy? #(= % c))
          (str c))))
 
 (defn not-char
-  "Parser that matches only a token that is not equal to character
-  'c', this character is returned."
+  "Matches only a token that is not equal to character
+  'c', the character is returned."
   [c]
   (with-parser
     (<?> (satisfy? #(complement (= % c)))
          (str "not" c))))
 
 (def letter
-  "Parser that matches any character that is considered a letter,
-  it uses 'Character/isLetter' internally."
+  "Matches any character that is considered a letter,
+  it uses 'Character/isLetter' internally. This parser will return
+  the matched character."
   (with-parser
     (satisfy? #(Character/isLetter %))))
 
 (def digit
-  "Parser that matches any character that is considered a digit,
-  it uses 'Character/isDigit' internally."
+  "Matches any character that is considered a digit, it uses 
+  'Character/isDigit' internally. This parser will return the 
+  matched character."
   (with-parser
     (satisfy? #(Character/isDigit %))))
 
 (def number
-  "Parser that matches a many characters (at least one) that are digits,
-  and returns the number parsed in base 10."
+  "Matches one or more digit characters and returns the number parsed
+  in base 10."
   (with-parser
     (<$> (comp #(Integer/parseInt %) #(apply str %))
          (many1 digit))))
 
 (def whitespace
-  "Parser that matches any character that is considered a whitespace,
-  it uses 'Character/isWhitespace' internally."
+  "Matches any character that is considered a whitespace,
+  it uses 'Character/isWhitespace' internally. This parser 
+  returns the whitespace character."
   (with-parser
     (satisfy? #(Character/isWhitespace %))))
 
 (def space
-  "Parser that matches any character that is equal to the character
-  \\space."
+  "Matches any character that is equal to the character
+  \\space. This parser returns the \\space character."
   (with-parser
     (char \space)))
 
@@ -309,7 +313,8 @@
     (<$> not want-input?)))
 
 (def eol
-  "Parser that matches different end-of-line characters/sequences."
+  "Parser that matches different end-of-line characters/sequences.
+  This parser returns a nil value."
   (with-parser
     (<|> (*> (char \newline) (m-result nil))
          (*> (string "\r\n") (m-result nil)))))
