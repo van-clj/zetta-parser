@@ -15,6 +15,9 @@
 (defn- span [pred xs]
   ((core/juxt #(core/take-while pred %) #(core/drop-while pred %)) xs))
 
+(defn apply-str [s]
+  (apply str s))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Basic Parsers
@@ -244,16 +247,27 @@
   'c', the character is returned."
   [c]
   (with-parser
-    (<?> (satisfy? #(= % c))
-         (str c))))
+    (cond
+      (set? c)
+        (<?> (satisfy? #(contains? c %))
+             (str c))
+      :else
+        (<?> (satisfy? #(= % c))
+             (str c)))))
+
 
 (defn not-char
   "Matches only a token that is not equal to character
   'c', the character is returned."
   [c]
   (with-parser
-    (<?> (satisfy? #(complement (= % c)))
-         (str "not" c))))
+    (cond
+      (set? c)
+        (<?> (satisfy? #(not (contains? c %)))
+             (str c))
+      :else
+        (<?> (satisfy? #(not (= % c)))
+             (str c)))))
 
 (def letter
   "Matches any character that is considered a letter,
@@ -261,6 +275,10 @@
   the matched character."
   (with-parser
     (satisfy? #(Character/isLetter %))))
+
+(def word
+  (with-parser
+    (<$> apply-str (many1 letter))))
 
 (def digit
   "Matches any character that is considered a digit, it uses 
@@ -288,6 +306,10 @@
   \\space. This parser returns the \\space character."
   (with-parser
     (char \space)))
+
+(def spaces
+  (with-parser
+    (many space)))
 
 (def end-of-input
   "Matches only when the end-of-input has been reached, otherwise

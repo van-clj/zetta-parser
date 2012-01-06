@@ -146,6 +146,14 @@
     (is (failure? result))
     (is (= (seq "1bc") (:remainder result)))))
 
+(deftest char-set-test
+  (let [result (parse-once (p/char #{\,}) ",")]
+    (is (done? result))))
+
+(deftest no-char-set-test
+  (let [result (parse-once (p/not-char #{\,}) ",")]
+    (is (failure? result))))
+
 (deftest number-test
   (let [result (parse-once p/number "123")]
     (is (done? result))
