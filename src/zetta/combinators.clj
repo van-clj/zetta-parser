@@ -61,6 +61,11 @@
   (with-parser
     (<$> cons p (many p))))
 
+(defn around
+  [sep content]
+  (with-parser
+    (*> sep (<* content sep))))
+
 (defn sep-by1
   "Applies one or more times the parser p separated by parser s."
   [p s]
