@@ -15,9 +15,6 @@
 (defn- span [pred xs]
   ((core/juxt #(core/take-while pred %) #(core/drop-while pred %)) xs))
 
-(defn apply-str [s]
-  (apply str s))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Basic Parsers
