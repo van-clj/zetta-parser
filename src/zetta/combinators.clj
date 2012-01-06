@@ -20,20 +20,19 @@
         (ff i0 m0 (conj errors err-msg) msg))]
     (p i0 m0 new-ff sf))))
 
-(declare many-v)
-
-(defn- some-v [p]
-  (do-parser
-    [h p
-     t (many-v p)] (cons h t)))
-
-(defn- many-v [p]
-  (with-parser
-    (<|> (some-v p) (m-result []))))
-
 (defn many
   "Applies zero or more times a parser p."
-  [p] (many-v p))
+  [p]
+  (letfn [
+    (many-v []
+      (with-parser
+        (<|> (some-v) (m-result []))))
+    (some-v []
+      (do-parser
+        [h p
+         t (many-v)] (cons h t)))
+    ]
+    (many-v)))
 
 (defn choice [ps]
   "It will try to parse the input using each of the
