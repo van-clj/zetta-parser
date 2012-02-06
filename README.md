@@ -81,7 +81,8 @@ through the input.
 ```
 
 For more info on how to implement parsers using monadic notations check
-clojure/algo.monads info, version >= 0.1.3 is required.
+[clojure/algo.monads](http://github.com/clojure/algo.monads) info, version
+>= 0.1.3 is required.
 
 ### Applicative Functors & with-parser
 
@@ -122,17 +123,17 @@ Example:
 ### parse & parse-once
 
 Most of the parser libraries out there will parse as long as you have all
-the input you want to parse _at once_, this is really limiting given that 
+the input you want to parse _at once_, this is really limiting given that
 sometimes all the input to parse is not available (input streaming from
-a connection and such). 
+a connection and such).
 
-zetta-parser provides the `parse` function which will parse the given input 
+zetta-parser provides the `parse` function which will parse the given input
 using a given parser, if there is not enough input to either fail or return
 a result, the parse function will return a continuation function that will
-receive the remaining of the input when available, if this continuation 
-function receives a string, this function will either return a parsed result, 
+receive the remaining of the input when available, if this continuation
+function receives a string, this function will either return a parsed result,
 a failure or another function continuation. In case you have a continuation
-and you pass an empty string to it, the parser will stop and will return either  
+and you pass an empty string to it, the parser will stop and will return either
 a failure or a successful parsed result.
 
 The `parse-once` function will behave like the parse function of any of the
