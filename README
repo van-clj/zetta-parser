@@ -1,10 +1,52 @@
-# clj-attoparsec
+# zetta-parser
 
-FIXME: write description
+zetta-parser provides an easy to use Parser combinator library that allows
+you to parse strings easily by composing simple parsers together to create
+more powerful ones.
 
 ## Usage
 
-FIXME: write
+You will need to require 3 namespaces in order to work with this library
+
+* ```(use 'zetta.core)```
+* ```(require '[zetta.combinators :as comb])```
+* ```(require '[zetta.parser.seq :as p])```
+
+Here we show some examples of the usage of this library
+
+### Parsing a CSV file
+
+```clojure
+(ns examples.csv
+  (:require [clojure.java.io :as io])
+
+  (:use zetta.core)
+  (:require [zetta.combinators :as comb])
+  (:require [zetta.parser.seq :as p]))
+
+(defrecord CSVFile [titles, values])
+
+(def csv-hash
+  (with-parser
+    (<$> #(apply hash-map %)
+         (comb/sep-by (comb/many (p/not-char ','))
+                      (<|> (p/char ',')
+                            p/eol)))))
+
+(def csv-file
+  (with-parser
+    (<$> #(CSVFile. %1 %2)
+         csv-hash
+         (comb/many csv-hash))))
+
+(defn get-csv-file [path]
+  (-> path
+      io/file
+      io/reader
+      line-seq
+      concat
+      (parse-once csv-file)))
+```
 
 ## License
 
