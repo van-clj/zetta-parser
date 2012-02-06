@@ -92,7 +92,9 @@ and the applicative functors macros come handy; zetta-parser provides
 high order macros to go through the input and return the types you want.
 
 The `<$>` macro will receive a normal function as it's first parameter,
-later one, the rest of the parameters are going to be a parsers.
+the rest of the parameters are going to be a parsers, at the end the result
+of each parser is going to be an input parameter for the function that was
+specified in the first parameter of the macro.
 
 The `*>` macro will receive multiple parsers, is going to execute each of
 them, and is going to return the value of the last parser to the right, there
