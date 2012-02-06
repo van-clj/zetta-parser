@@ -4,7 +4,7 @@ zetta-parser provides an easy to use Parser combinator library that allows
 you to parse strings easily by composing simple parsers together to create
 more powerful ones.
 
-Basic parsers can be found in zetta.parser.seq, this parsers will work
+Basic parsers can be found in `zetta.parser.seq`, this parsers will work
 with mostly any type of items you find on a stream, some others such
 as `string` and `number` expect to process a stream of characters.
 
@@ -12,25 +12,25 @@ as `string` and `number` expect to process a stream of characters.
 
 zetta-parser provides several namespaces, each with an specific functionality:
 
-* ```zetta.core```
+* `zetta.core`
   Holds the basic functions to start using a zetta-parser, such
   as the parser runners, a monadic implementation for parsers, etc.
 
-* ```zetta.parser.seq```
+* `zetta.parser.seq`
   Holds the most basic parsers you may find, you can use this parsers
   out of the box to create more complex ones using the `zetta.combinators`
   namespace.
 
-* ```zetta.parse.string```
+* `zetta.parse.string`
   Implements some of the `zetta.parser.seq` namespace parsers so that they
   always return a string result rather than a seq
 
-* ```zetta.combinators```
+* `zetta.combinators`
   Contains useful parsers transformers like many, sep-by, among others, this
   functions will allow you to enhance the behavior of simple parsers to allow
   them parse more complex inputs.
 
-### ```do-parse``` magic
+### `do-parse` Notation
 
 do-parse is a macro that will allow you to implement parsers using a monadic
 notation like the one provided by clojure.algo.monads. This kinds of
@@ -45,17 +45,21 @@ through the input.
 
 (def parse-professional
   (do-parser
-    [; ignore spaces
-     _ spaces
-     ; parse many characters until space
+    [_ spaces
+     ; ^ ignore spaces
+
      name (many-till space)
-     ; ignore spaces
+     ; ^ parse many characters until space
+
      _ spaces
-     ; parse many characters until space
+     ; ^ ignore spaces
+
      profession (many-till space)
-     ; depending on the profession we might return one thing
-     ; or the other
+     ; ^ parse many characters until space
+
      :cond [
+     ; ^ depending on the profession we might return one thing
+     ; or the other
        (= profession "actor")
        [
          movies parse-movies
@@ -74,13 +78,12 @@ through the input.
          result (m-result (Programmer. name programs))
        ]]]
      result))
-
-
 ```
+
 For more info on how to implement parsers using monadic notations check
 clojure/algo.monads info, version >= 0.1.3 is required.
 
-### Applicative Functors & ```with-parser```
+### Applicative Functors & with-parser
 
 Most of the times however, the behavior of your parser won't change
 depending on the input you are parsing, this is when the `with-parser` macro
@@ -116,7 +119,7 @@ Example:
 
 ```
 
-### ```parse``` & ```parse-once```
+### parse & parse-once
 
 Most of the parser libraries out there will parse as long as you have all
 the input you want to parse _at once_, this is really limiting given that 
