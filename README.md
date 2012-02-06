@@ -30,7 +30,7 @@ zetta-parser provides several namespaces, each with an specific functionality:
   functions will allow you to enhance the behavior of simple parsers to allow
   them parse more complex inputs.
 
-### `do-parse` Notation
+### do-parse Notation
 
 do-parse is a macro that will allow you to implement parsers using a monadic
 notation like the one provided by clojure.algo.monads. This kinds of
