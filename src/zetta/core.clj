@@ -36,13 +36,13 @@
   "Returns true when the parser has successfuly parsed the
   given input."
   [result]
-  (= (type result) ResultDone))
+  (instance? ResultDone result))
 
 (defn failure?
   "Returns true when the parser has failed when parsing the
   given input."
   [result]
-  (= (type result) ResultFailure))
+  (instance? ResultFailure result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -61,11 +61,11 @@
   incomplete ::incomplete)
 
 (defn complete?
-  "Tells whether the given value is equal to the complete constant or not."
+  "Test if equal to the complete constant or not."
   [m] (= m complete))
 
 (defn incomplete?
-  "Tells whether the given value is equal to the incomplete constant or not."
+  "Test if equal to the incomplete constant or not."
   [m] (= m incomplete))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
