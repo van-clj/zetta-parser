@@ -1,4 +1,4 @@
-# zetta-parser [![Build Status](https://secure.travis-ci.org/roman/zetta-parser.png)](http://travis-ci.org/roman/zetta-parser)
+# zetta-parser [![Build Status](https://secure.travis-ci.org/van-clj/zetta-parser.png)](http://travis-ci.org/van-clj/zetta-parser)
 
 zetta-parser provides an easy to use Parser combinator library that allows
 you to parse strings easily by composing simple parsers together to create
