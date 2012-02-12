@@ -309,6 +309,14 @@
   (with-parser
     (many space)))
 
+(def skip-spaces
+  (with-parser
+    (skip-many space)))
+
+(def skip-whitespaces
+  (with-parser
+    (skip-many whitespace)))
+
 (def end-of-input
   "Matches only when the end-of-input has been reached, otherwise
   it fails. This parser returns a nil value."
