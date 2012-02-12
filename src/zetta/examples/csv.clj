@@ -1,7 +1,9 @@
 (ns zetta.examples.csv
+  ^{ :doc "Naive CSV parser" }
   (:refer-clojure :exclude [char])
-  (:require [clojure.core :as core])
-  (:require [clojure.java.io :as io])
+  (:require [clojure.core :as core]
+            [clojure.string :as str]
+            [clojure.java.io :as io])
 
   (:use zetta.core)
   (:use
@@ -19,20 +21,19 @@
   (char \,))
            
 (def csv-key
-  (with-parser
-    (<$> apply-str 
-         (many1 
-           (around spaces (not-char #{\, \newline}))))))
+  (<$> str/join
+       (many1 
+         (around spaces (not-char #{\, \newline})))))
 
 (def csv-entry
-  (with-parser
-     (<* (sep-by1 csv-key
-                  csv-sep)
-         (<|> eol end-of-input))))
+  (<* (sep-by1 csv-key
+               csv-sep)
+       (<|> eol end-of-input)))
 
 (def csv-file
-  (with-parser
-    (<$> #(CSVFile. %1 %2)
-         csv-entry
-         (many csv-entry))))
+  (<$> #(CSVFile. %1 %2)
+       csv-entry
+       (many csv-entry)))
 
+; Run this with:
+; (parse-once csv-file "first,last\nJohn,Doe")

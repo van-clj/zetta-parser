@@ -89,17 +89,17 @@ For more info on how to implement parsers using monadic notations check
 [clojure/algo.monads](http://github.com/clojure/algo.monads) info, version
 >= 0.1.3 is required.
 
-### Applicative Functors & with-parser
+### Applicative Functors
 
 Most of the times however, the behavior of your parser won't change
 depending on the input you are parsing, this is when the `with-parser` macro
 and the applicative functors macros come handy; zetta-parser provides
 high order macros to go through the input and return the types you want.
 
-The `<$>` macro will receive a normal function as it's first parameter,
+The `<$>` function will receive a normal function as it's first parameter,
 the rest of the parameters are going to be a parsers, at the end the result
 of each parser is going to be an input parameter for the function that was
-specified in the first parameter of the macro.
+specified in the first parameter of the function.
 
 The `*>` macro will receive multiple parsers, is going to execute each of
 them, and is going to return the value of the last parser to the right, there
@@ -110,20 +110,19 @@ Example:
 
 ```clojure
 (def parse-programmer
-  (with-parser
-    (<$> #(Programmer. %1 %2)
-         ; ^ A function that is going to receive two parameters, two
-         ;   parsers should follow this parameter.
+  (<$> #(Programmer. %1 %2)
+       ; ^ A function that is going to receive two parameters, two
+       ;   parsers should follow this parameter.
 
-         (*> spaces (many-till space)) ; this is %1
-         ; ^ this parser will parse spaces, ignore them and return the result
-         ;   of the (many-till space) parser, this will be the %1 on the
-         ;   function given on the first parameter.
+       (*> spaces (many-till space)) ; this is %1
+       ; ^ this parser will parse spaces, ignore them and return the result
+       ;   of the (many-till space) parser, this will be the %1 on the
+       ;   function given on the first parameter.
 
-         (*> spaces (many-till space)))))
-         ; ^ this will do the same as the parser given in the second parameter
-         ;   of <$>, the return value of this will be %2 on the the function
-         ;   given on the first parameter.
+       (*> spaces (many-till space))))
+       ; ^ this will do the same as the parser given in the second parameter
+       ;   of <$>, the return value of this will be %2 on the the function
+       ;   given on the first parameter.
 
 ```
 
@@ -161,17 +160,15 @@ other parser libraries.
 (defrecord CSVFile [titles, values])
 
 (def csv-hash
-  (with-parser
-    (<$> #(apply hash-map %)
-         (comb/sep-by (comb/many (p/not-char ','))
-                      (<|> (p/char ',')
-                            p/eol)))))
+  (<$> #(apply hash-map %)
+       (comb/sep-by (comb/many (p/not-char ','))
+                    (<|> (p/char ',')
+                          p/eol))))
 
 (def csv-file
-  (with-parser
-    (<$> #(CSVFile. %1 %2)
-         csv-hash
-         (comb/many csv-hash))))
+  (<$> #(CSVFile. %1 %2)
+       csv-hash
+       (comb/many csv-hash)))
 
 (defn get-csv-file [path]
   (-> path
