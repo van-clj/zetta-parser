@@ -248,10 +248,10 @@
     (cond
       (set? c)
         (<?> (satisfy? #(contains? c %))
-             (str c))
+             (str "failed parser char: " c))
       :else
         (<?> (satisfy? #(= % c))
-             (str c)))))
+             (str "failed parser char: " c)))))
 
 
 (defn not-char
