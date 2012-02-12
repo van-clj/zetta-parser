@@ -25,8 +25,7 @@
   [p]
   (letfn [
     (many-v []
-      (with-parser
-        (<|> (some-v) (always []))))
+      (<|> (some-v) (always [])))
     (some-v []
       (do-parser
         [h p
@@ -38,8 +37,7 @@
   "It will try to parse the input using each of the
   given parsers, it will halt on the first parser that
   successfuly parse the input."
-  (with-parser
-    (reduce <|> ps)))
+  (reduce <|> ps))
 
 (defn replicate
   "Apply the given parser 'p' 'n' times, returning every result."
@@ -51,58 +49,51 @@
   "Applies parser p to the input, if p fails then default-val
   is returned."
   [default-val p]
-  (with-parser
-    (<|> p (always default-val))))
+  (<|> p (always default-val)))
 
 (defn many1
   "Applies one or more times a parser p."
   [p]
-  (with-parser
-    (<$> cons p (many p))))
+  (<$> cons p (many p)))
 
 (defn around
   [sep content]
-  (with-parser
-    (*> sep (<* content sep))))
+  (*> sep (<* content sep)))
 
 (defn sep-by1
   "Applies one or more times the parser p separated by parser s."
   [p s]
-  (with-parser
-    (<$> cons
-         p
-         (<|> (*> s (sep-by1 p s))
-              (always [])))))
+  (<$> cons
+       p
+       (<|> (*> s (sep-by1 p s))
+            (always []))))
 
 (defn sep-by
   "Applies zero or more times the parser p separated by parser s."
   [p s]
-  (with-parser
-    (<|>  (<$> cons
-               p
-               (<|> (*> s (sep-by1 p s))
-                    (always [])))
-          (always []))))
+  (<|> (<$> cons
+            p
+            (<|> (*> s (sep-by1 p s))
+                 (always [])))
+       (always [])))
 
 (defn many-till
   "Applies the parser p zero or more times until the parser end
   is successful."
   [p end]
-  (with-parser
-    (<|> (*> end (always []))
-         (>>= p (fn [h]
-         (>>= (many-till p end) (fn [t]
-         (always (cons h t)))))))))
+  (<|> (*> end (always []))
+       (>>= p (fn [h]
+       (>>= (many-till p end) (fn [t]
+       (always (cons h t))))))))
 
 (defn skip-many
   "Skip zero or more applications of parser p."
   [p]
-  (with-parser
-    (<|> (*> p (skip-many p))
-         (always nil))))
+  (<|> (*> p (skip-many p))
+       (always nil)))
 
 (defn skip-many1
   "Skip one or more applications of parser p."
   [p]
-  (with-parser
-    (*> p (skip-many p))))
+  (*> p (skip-many p)))
+

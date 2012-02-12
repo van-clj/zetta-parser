@@ -17,24 +17,21 @@
   'pred' returns 'true' on the parsed input. The matched input is returned
   as a string."
   [n pred]
-  (with-parser
-    (<$> str/join
-         (pseq/take-with n pred))))
+  (<$> str/join
+       (pseq/take-with n pred)))
 
 (defn take
   "Matches exactly 'n' items from input. Returnes the matched input as
   a string."
   [n]
-  (with-parser
-    (take-with n (constantly true))))
+  (take-with n (constantly true)))
 
 (defn string
   "Parses a sequence of items that identically match
    a given string 's'. Returns the parsed string.  This parser
    consumes no input if it fails (even with a partial match)."
   [s]
-  (with-parser
-    (take-with (count s) #(= s %))))
+  (take-with (count s) #(= s %)))
 
 (defn take-while
   "Matches input as long as pred returns 'true', and return
@@ -47,9 +44,8 @@
    combinators such as 'many', because such parsers loop until a
    failure occurs.  Careless use will thus result in an infinite loop."
   [pred]
-  (with-parser
-    (<$> str/join
-         (pseq/take-while pred))))
+  (<$> str/join
+       (pseq/take-while pred)))
 
 (defn take-till
   "Matches input as long as 'pred' returns 'false'
@@ -62,16 +58,14 @@
   combinators such as 'many', because such parsers loop until a
   failure occurs.  Careless use will thus result in an infinite loop."
   [pred]
-  (with-parser
-    (take-while (complement pred))))
+  (take-while (complement pred)))
 
 (def take-rest
   "Returns the rest of the seqs that are given to the parser,
   the result will be a seqs of strings where the number of seqs
   from the first level will represent the number of times a
   continuation was used to continue the parse process."
-  (with-parser
-    (<$> #(map str/join %) pseq/take-rest)))
+  (<$> #(map str/join %) pseq/take-rest))
 
 (defn take-while1
   "Matches input as long as pred returns 'true'. This parser returns
@@ -79,6 +73,5 @@
 
    This parser will fail if a first match is not accomplished."
   [pred]
-  (with-parser
-    (<$> str/join (pseq/take-while1 pred))))
+  (<$> str/join (pseq/take-while1 pred)))
 

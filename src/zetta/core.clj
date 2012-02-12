@@ -61,65 +61,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Monad & Applicative utility functions
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; Haskell like operators
-
-(defmonadfn >>=
-  "Equivalent to the m-bind function for monads."
-  [m1 f]
-  (m-bind m1 f))
-
-(defn- bind-ignore-step [mresult m1]
-  `(>>= ~mresult (fn [~'_]
-   ~m1)))
-
-(defmacro >>
-  "Composes two or more monadic values returning the
-   result of the last one."
-  [& more]
-  (reduce bind-ignore-step more))
-
-;; Haskell Applicative operators
-
-(defmacro *>
-  "Composes two or more applicative functors, returning the
-   result value of the last one."
-  [& more]
-  `(>> ~@more))
-
-(defmacro <*
-  "Composes two or more applicative functors, returning the
-   result value of the first one."
-  [& more]
-  (let [step (first more)
-        steps (rest more)]
-  `(>>= ~step (fn [~'result#]
-   (>> ~(reduce bind-ignore-step steps)
-        (~'m-result ~'result#))))))
-
-(defmonadfn <$>
-  "Maps the function f to the results of the given applicative functors,
-  each applicative functor result value is going to be a parameter for
-  function f.
-
-  Example:
-    (<$> + number number)
-
-  Where number is parser that will return a number from the input stream."
-  [f & more]
-  (>>= (m-seq more) (fn [params]
-  (m-result (apply f params)))))
-
-(defmonadfn <|>
-  "Equivalent to the m-plus function for monads."
-  [m1 m2]
-  (m-plus m1 m2))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
 ;; Parser Monad utility functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -155,6 +96,13 @@
       (ok-fn [input1 more1 a] ((f a) input1 more1 err-fn ok-fn0))]
       (p input0 more0 err-fn ok-fn))))
 
+(defn join-parsers [p1 p2]
+  (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
+                 (letfn [
+                   (err-fn [input1 more1 _ _]
+                     (p2 input1 more1 err-fn0 ok-fn))]
+                 (p1 input0 more0 err-fn ok-fn))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Parser Monad implementation
@@ -171,11 +119,7 @@
     m-zero   (fail-parser "m-zero")
 
     m-plus   (fn m-plus-fn [p1 p2]
-               (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
-                 (letfn [
-                   (err-fn [input1 more1 _ _]
-                     (p2 input1 more1 err-fn0 ok-fn))]
-                 (p1 input0 more0 err-fn ok-fn))))])
+               (join-parsers p1 p2))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -240,3 +184,61 @@
       (result "")
       result)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; Monad & Applicative utility functions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Haskell like operators
+
+(defn >>=
+  "Equivalent to the m-bind function for monads."
+  [p f]
+  (bind-parsers p f))
+
+(defn- bind-ignore-step [mresult p1]
+  `(>>= ~mresult (fn [~'_]
+   ~p1)))
+
+(defmacro >>
+  "Composes two or more monadic values returning the
+   result of the last one."
+  [& more]
+  (reduce bind-ignore-step more))
+
+;; Haskell Applicative operators
+
+(defmacro *>
+  "Composes two or more applicative functors, returning the
+   result value of the last one."
+  [& more]
+  `(>> ~@more))
+
+(defmacro <*
+  "Composes two or more applicative functors, returning the
+   result value of the first one."
+  [& more]
+  (let [step (first more)
+        steps (rest more)]
+  `(>>= ~step (fn [~'result#]
+   (>> ~(reduce bind-ignore-step steps)
+        (always ~'result#))))))
+
+(defn <$>
+  "Maps the function f to the results of the given applicative functors,
+  each applicative functor result value is going to be a parameter for
+  function f.
+
+  Example:
+    (<$> + number number)
+
+  Where number is parser that will return a number from the input stream."
+  [f & more]
+  (with-parser
+    (m-bind (m-seq more) (fn [params]
+    (m-result (apply f params))))))
+
+(def <|>
+  "Equivalent to the m-plus function for monads."
+  join-parsers)

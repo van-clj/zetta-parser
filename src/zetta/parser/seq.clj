@@ -116,8 +116,7 @@
 (defn take
   "Matches exactly 'n' items from input. Returnes the matched input as a seq."
   [n]
-  (with-parser
-    (take-with n (constantly true))))
+  (take-with n (constantly true)))
 
 (defn string
   "Parses a sequence of items that identically match
@@ -125,9 +124,8 @@
    consumes no input if it fails (even with a partial match)."
   [s]
   (let [ch-vec (vec s)]
-    (with-parser
-      (<$> str/join
-           (take-with (count s) #(= ch-vec %))))))
+    (<$> str/join
+         (take-with (count s) #(= ch-vec %)))))
 
 (defn skip-while
   "A parser that skips input for as long as 'pred' returns 'true'."
@@ -173,9 +171,8 @@
            ]
            :else [result (m-result (conj acc pre))]]
            result))]
-  (with-parser
-    (<$> (comp #(apply core/concat %) core/reverse)
-         (take-while-loop [])))))
+  (<$> (comp #(apply core/concat %) core/reverse)
+       (take-while-loop []))))
 
 (defn take-till
   "Matches input as long as 'pred' returns 'false'
@@ -188,8 +185,7 @@
   combinators such as 'many', because such parsers loop until a
   failure occurs.  Careless use will thus result in an infinite loop."
   [pred]
-  (with-parser
-    (take-while (complement pred))))
+  (take-while (complement pred)))
 
 (def take-rest
   "Returns the rest of the seqs that are given to the parser,
@@ -237,88 +233,76 @@
 (def any-token
   "Matches any element from the input seq, it
   will return the parsed element from the seq."
-  (with-parser
-    (satisfy? (constantly true))))
+  (satisfy? (constantly true)))
 
 (defn char
   "Matches only a token that is equal to character
   'c', the character is returned."
   [c]
-  (with-parser
-    (cond
-      (set? c)
-        (<?> (satisfy? #(contains? c %))
-             (str "failed parser char: " c))
-      :else
-        (<?> (satisfy? #(= % c))
-             (str "failed parser char: " c)))))
+  (cond
+    (set? c)
+      (<?> (satisfy? #(contains? c %))
+           (str "failed parser char: " c))
+    :else
+      (<?> (satisfy? #(= % c))
+           (str "failed parser char: " c))))
 
 
 (defn not-char
   "Matches only a token that is not equal to character
   'c', the character is returned."
   [c]
-  (with-parser
-    (cond
-      (set? c)
-        (<?> (satisfy? #(not (contains? c %)))
-             (str c))
-      :else
-        (<?> (satisfy? #(not (= % c)))
-             (str c)))))
+  (cond
+    (set? c)
+      (<?> (satisfy? #(not (contains? c %)))
+           (str c))
+    :else
+      (<?> (satisfy? #(not (= % c)))
+           (str c))))
 
 (def letter
   "Matches any character that is considered a letter,
   it uses 'Character/isLetter' internally. This parser will return
   the matched character."
-  (with-parser
-    (satisfy? #(Character/isLetter %))))
+  (satisfy? #(Character/isLetter %)))
 
 (def word
-  (with-parser
-    (<$> str/join (many1 letter))))
+  (<$> str/join (many1 letter)))
 
 (def digit
   "Matches any character that is considered a digit, it uses
   'Character/isDigit' internally. This parser will return the
   matched character."
-  (with-parser
-    (satisfy? #(Character/isDigit %))))
+  (satisfy? #(Character/isDigit %)))
 
 (def number
   "Matches one or more digit characters and returns the number parsed
   in base 10."
-  (with-parser
-    (<$> (comp #(Integer/parseInt %) str/join)
-         (many1 digit))))
+  (<$> (comp #(Integer/parseInt %) str/join)
+       (many1 digit)))
 
 (def whitespace
   "Matches any character that is considered a whitespace,
   it uses 'Character/isWhitespace' internally. This parser
   returns the whitespace character."
-  (with-parser
-    (satisfy? #(Character/isWhitespace %))))
+  (satisfy? #(Character/isWhitespace %)))
 
 (def space
   "Matches any character that is equal to the character
   \\space. This parser returns the \\space character."
-  (with-parser
-    (char \space)))
+  (char \space))
 
 (def spaces
   "Matches many spaces."
-  (with-parser
-    (many space)))
+  (many space))
 
 (def skip-spaces
   "Skips many spaces."
-  (with-parser
-    (skip-many space)))
+  (skip-many space))
 
 (def skip-whitespaces
   "Skips many whitespaces."
-  (with-parser
-    (skip-many whitespace)))
+  (skip-many whitespace))
 
 (def end-of-input
   "Matches only when the end-of-input has been reached, otherwise
@@ -342,14 +326,12 @@
 (def at-end?
   "Parser that never fails, it returns 'true' when the end-of-input
   is reached, 'false' otherwise."
-  (with-parser
-    (<$> not want-input?)))
+  (<$> not want-input?))
 
 (def eol
   "Parser that matches different end-of-line characters/sequences.
   This parser returns a nil value."
-  (with-parser
-    (<|> (*> (char \newline) (always nil))
-         (*> (string "\r\n") (always nil)))))
+  (<|> (*> (char \newline) (always nil))
+       (*> (string "\r\n") (always nil))))
 
 
