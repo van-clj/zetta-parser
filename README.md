@@ -38,6 +38,11 @@ parsers are really handy when the behavior of the parser changes as you parse
 through the input.
 
 ```clojure
+(ns example
+  (:use [zetta.core :only (do-parser always)]
+        [zetta.parser.seq :only (space spaces)]
+        [zetta.combinators :only (many-till)]))
+
 ; sub parsers that are going to be used
 (def parse-movies ...)
 (def parse-patients ...)
@@ -63,19 +68,19 @@ through the input.
        (= profession "actor")
        [
          movies parse-movies
-         result (m-result (Actor. name movies))
+         result (always (Actor. name movies))
        ]
 
        (= profession "doctor")
        [
          patients parse-patients
-         result (m-result (Doctor. name patients))
+         result (always (Doctor. name patients))
        ]
 
        (= profession "programmer")
        [
          programms parse-programs
-         result (m-result (Programmer. name programs))
+         result (always (Programmer. name programs))
        ]]]
      result))
 ```
