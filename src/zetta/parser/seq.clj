@@ -1,7 +1,8 @@
 (ns zetta.parser.seq
   (:refer-clojure
    :exclude [ensure get take take-while char some replicate])
-  (:require [clojure.core :as core])
+  (:require [clojure.core :as core]
+            [clojure.string :as str])
 
   (:use zetta.core)
   (:use zetta.combinators))
@@ -57,11 +58,11 @@
       (with-parser
         ((>> demand-input (ensure n)) i0 m0 ff sf)))))
 
-(def ^:private get
+(def get
   (fn [i0 m0 _ff sf]
     (sf i0 m0 i0)))
 
-(defn- put [s]
+(defn put [s]
   (fn [_i0 m0 _ff sf]
     (sf s m0 nil)))
 
@@ -275,11 +276,11 @@
 
 (def word
   (with-parser
-    (<$> apply-str (many1 letter))))
+    (<$> str/join (many1 letter))))
 
 (def digit
-  "Matches any character that is considered a digit, it uses 
-  'Character/isDigit' internally. This parser will return the 
+  "Matches any character that is considered a digit, it uses
+  'Character/isDigit' internally. This parser will return the
   matched character."
   (with-parser
     (satisfy? #(Character/isDigit %))))
@@ -293,7 +294,7 @@
 
 (def whitespace
   "Matches any character that is considered a whitespace,
-  it uses 'Character/isWhitespace' internally. This parser 
+  it uses 'Character/isWhitespace' internally. This parser
   returns the whitespace character."
   (with-parser
     (satisfy? #(Character/isWhitespace %))))

@@ -1,6 +1,7 @@
 (ns zetta.parser.string
   (:refer-clojure :exclude [take take-while])
-  (:require [clojure.core :as core])
+  (:require [clojure.core :as core]
+            [clojure.string :as str])
 
   (:use     [zetta.core])
   (:require [zetta.parser.seq :as pseq]))
@@ -17,7 +18,7 @@
   as a string."
   [n pred]
   (with-parser
-    (<$> apply-str
+    (<$> str/join
          (pseq/take-with n pred))))
 
 (defn take
@@ -47,7 +48,7 @@
    failure occurs.  Careless use will thus result in an infinite loop."
   [pred]
   (with-parser
-    (<$> apply-str
+    (<$> str/join
          (pseq/take-while pred))))
 
 (defn take-till
@@ -70,7 +71,7 @@
   from the first level will represent the number of times a
   continuation was used to continue the parse process."
   (with-parser
-    (<$> #(map apply-str %) pseq/take-rest)))
+    (<$> #(map str/join %) pseq/take-rest)))
 
 (defn take-while1
   "Matches input as long as pred returns 'true'. This parser returns
@@ -79,5 +80,5 @@
    This parser will fail if a first match is not accomplished."
   [pred]
   (with-parser
-    (<$> apply-str (pseq/take-while1 pred))))
+    (<$> str/join (pseq/take-while1 pred))))
 
