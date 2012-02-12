@@ -1,4 +1,4 @@
-(defproject zetta-parser "0.0.1-SNAPSHOT"
+(defproject org.van-clj/zetta-parser "0.0.1-SNAPSHOT"
   :description "Powerful monadic parser combinator for Clojure"
   :author "Roman Gonzalez"
   :repositories { "sonatype" {:url "https://oss.sonatype.org/content/repositories/snapshots/"}}
