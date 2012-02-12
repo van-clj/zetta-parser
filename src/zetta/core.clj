@@ -135,18 +135,25 @@
 (defn add-parser-stream
   "Concats the input and more flag from two different parsers and calls
   the function f with the result."
-  [i0 m0 i1 m1 f]
-  (f (concat i0 i1) (concat-more m0 m1)))
+  [input0 more0 input1 more1 f]
+  (f (concat input0 input1) (concat-more more0 more1)))
 
 (defn fail-parser
   "Parser that will always fail, you may provide an error message msg that
   will be shown on the final result."
   [msg]
-  (fn failed-parser [i0 m0 ff _sf]
-    (ff i0 m0 [] (str "Failed reading: " msg))))
+  (fn failed-parser [input0 more0 err-fn _ok-fn]
+    (err-fn input0 more0 [] (str "Failed reading: " msg))))
 
 (defn always [a]
-  (fn new-parser [i0 m0 ff sf] (sf i0 m0 a)))
+  (fn new-parser [input0 more0 err-fn ok-fn]
+      (ok-fn input0 more0 a)))
+
+(defn bind-parsers [p f]
+  (fn parser-continuation [input0 more0 err-fn ok-fn0]
+    (letfn [
+      (ok-fn [input1 more1 a] ((f a) input1 more1 err-fn ok-fn0))]
+      (p input0 more0 err-fn ok-fn))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -159,18 +166,16 @@
                (always a))
 
     m-bind   (fn bind-fn [p f]
-               (fn parser-continuation [i0 m0 ff sf]
-                 (letfn [(new-sf [i1 m1 a] ((f a) i1 m1 ff sf))]
-                 (p i0 m0 ff new-sf))))
+               (bind-parsers p f))
 
     m-zero   (fail-parser "m-zero")
 
     m-plus   (fn m-plus-fn [p1 p2]
-               (fn m-plus-parser [i0 m0 ff sf]
+               (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
                  (letfn [
-                   (new-ff [i1 m1 _ _]
-                     (p2 i1 m1 ff sf))]
-                 (p1 i0 m0 new-ff sf))))])
+                   (err-fn [input1 more1 _ _]
+                     (p2 input1 more1 err-fn0 ok-fn))]
+                 (p1 input0 more0 err-fn ok-fn))))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -196,20 +201,20 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- failure-fn [i0 _m0 stack msg]
-  (ResultFailure. i0 stack msg))
+(defn- failure-fn [input0 _more0 stack msg]
+  (ResultFailure. input0 stack msg))
 
-(defn- success-fn [i0 _m0 result]
-  (ResultDone. i0 result))
+(defn- success-fn [input0 _more0 result]
+  (ResultDone. input0 result))
 
 (defn prompt
   "This is used for continuations of parsers (when there is not
   enough input available for the parser to either succeed or fail)."
-  [i0 _m0 ff sf]
-  (fn [s]
-    (if (empty? s)
-      (ff i0 complete)
-      (sf (concat i0 (seq s)) incomplete))))
+  [input0 _more0 err-fn ok-fn]
+  (fn [new-input]
+    (if (empty? new-input)
+      (err-fn input0 complete)
+      (ok-fn (concat input0 (seq new-input)) incomplete))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

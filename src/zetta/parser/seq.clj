@@ -25,46 +25,46 @@
 (def demand-input
   "Basic parser that will ensure the request of more
    input via a continuation."
-  (fn [i0 m0 ff sf]
-    (if (complete? m0)
-      (ff i0 m0 ["demand-input"] "not enough input")
+  (fn [input0 more0 err-fn0 ok-fn0]
+    (if (complete? more0)
+      (err-fn0 input0 more0 ["demand-input"] "not enough input")
       (letfn [
-        (new-ff [i m]
-          (ff i m ["demand-input"] "not enough input"))
-        (new-sf [i m]
-          (sf i m nil))]
-      (prompt i0 m0 new-ff new-sf)))))
+        (err-fn [input more]
+          (err-fn0 input more ["demand-input"] "not enough input"))
+        (ok-fn [input more]
+          (ok-fn0 input more nil))]
+      (prompt input0 more0 err-fn ok-fn)))))
 
 (def want-input?
   "This parser always succeeds.  It returns 'true' if any
    input is available either immediately or on demand, and
    'false' if the end of all input has been reached."
-  (fn [i0 m0 _ff sf]
+  (fn [input0 more0 _err-fn ok-fn0]
     (cond
-      (not (empty? i0)) (sf i0 m0 true)
-      (= m0 complete)   (sf i0 m0 false)
+      (not (empty? input0)) (ok-fn0 input0 more0 true)
+      (complete? more0) (ok-fn0 input0 more0 false)
       :else
-        (letfn [(new-ff [i m] (sf i m false))
-                (new-sf [i m] (sf i m true))]
-        (prompt i0 m0 new-ff new-sf)))))
+        (letfn [(err-fn [input more] (ok-fn0 input more false))
+                (ok-fn [input more] (ok-fn0 input more true))]
+        (prompt input0 more0 err-fn ok-fn)))))
 
 (defn ensure
   "If at least 'n' items of input are available, return the current
   input, otherwise fail."
   [n]
-  (fn [i0 m0 ff sf]
-    (if (>= (count i0) n)
-      (sf i0 m0 i0)
+  (fn [input0 more0 err-fn ok-fn]
+    (if (>= (count input0) n)
+      (ok-fn input0 more0 input0)
       (with-parser
-        ((>> demand-input (ensure n)) i0 m0 ff sf)))))
+        ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
 
 (def get
-  (fn [i0 m0 _ff sf]
-    (sf i0 m0 i0)))
+  (fn [input0 more0 _err-fn ok-fn]
+    (ok-fn input0 more0 input0)))
 
 (defn put [s]
-  (fn [_i0 m0 _ff sf]
-    (sf s m0 nil)))
+  (fn [_input0 more0 _err-fn ok-fn]
+    (ok-fn s more0 nil)))
 
 (defn satisfy?
   "The parser 'satisfy pred' succeeds for any item for which the
@@ -72,25 +72,25 @@
    parsed."
   [pred]
   (do-parser
-    [s     (ensure 1)
-     :let  [w (first s)]
-     :if (pred w)
+    [input     (ensure 1)
+     :let  [item (first input)]
+     :if (pred item)
        :then [
-         _ (put (rest s))
+         _ (put (rest input))
        ]
        :else [
         _ (fail-parser "satisfy?")
        ]]
-    w))
+    item))
 
 (defn skip
   "The parser 'skip pred' succeeds for any item for which the predicate
    'pred' returns 'true'."
   [pred]
   (do-parser
-    [s (ensure 1)
-     :if (pred (first s))
-       :then [_ (put (rest s))]
+    [input (ensure 1)
+     :if (pred (first input))
+       :then [_ (put (rest input))]
        :else [_ (fail-parser "skip")]]
      nil))
 
@@ -100,8 +100,8 @@
   as a seq."
   [n pred]
   (do-parser
-    [s (ensure n)
-     :let [[h t] (split-at n s)]
+    [input (ensure n)
+     :let [[h t] (split-at n input)]
      :if (pred h)
        :then [_ (put t)]
        :else [_ (fail-parser "take-with")]]
@@ -124,28 +124,28 @@
    a given string 's'. Returns the parsed string.  This parser
    consumes no input if it fails (even with a partial match)."
   [s]
-  (let [vecs (vec s)]
+  (let [ch-vec (vec s)]
     (with-parser
-      (<$> (partial apply str)
-           (take-with (count s) #(= vecs %))))))
+      (<$> str/join
+           (take-with (count s) #(= ch-vec %))))))
 
 (defn skip-while
   "A parser that skips input for as long as 'pred' returns 'true'."
   [pred]
-  (let [go (do-parser
-            [t0 get
-             :let [t (drop-while pred t0)]
-             _ (put t)
-             :if (empty? t)
-             :then [
-               input want-input?
-               :if input
-               :then [_ (skip-while pred)]
-               :else []
-             ]
-             :else []]
-             nil)]
-     go))
+  (let [skip-while-loop (do-parser
+             [input0 get
+              :let [input (drop-while pred input0)]
+              _ (put input)
+              :if (empty? input)
+              :then [
+                input-available? want-input?
+                :if input-available?
+                :then [_ (skip-while pred)]
+                :else []
+              ]
+              :else []]
+              nil)]
+     skip-while-loop))
 
 (defn take-while
   "Matches input as long as pred returns 'true', and return
@@ -159,23 +159,23 @@
    failure occurs.  Careless use will thus result in an infinite loop."
   [pred]
   (letfn [
-    (go [acc]
+    (take-while-loop [acc]
       (do-parser
-        [t0 get
-         :let [[h t] (span pred t0)]
-         _ (put t)
-         :if (empty? t)
+        [input0 get
+         :let [[pre post] (span pred input0)]
+         _ (put post)
+         :if (empty? post)
            :then [
-             input want-input?
-             :if input
-               :then [result (go (conj acc h))]
-               :else [result (m-result (conj acc h))]
+             input-available? want-input?
+             :if input-available?
+               :then [result (take-while-loop (conj acc pre))]
+               :else [result (always (conj acc pre))]
            ]
-           :else [result (m-result (conj acc h))]]
+           :else [result (m-result (conj acc pre))]]
            result))]
-  (do-parser
-    [result (go [])]
-    (->> result core/reverse (apply core/concat)))))
+  (with-parser
+    (<$> (comp #(apply core/concat %) core/reverse)
+         (take-while-loop [])))))
 
 (defn take-till
   "Matches input as long as 'pred' returns 'false'
@@ -197,20 +197,20 @@
   from the first level will represent the number of times a
   continuation was used to continue the parse process."
   (letfn [
-    (go [acc]
+    (take-rest-loop [acc]
       (do-parser
-        [input want-input?
-         :if input
+        [input-available? want-input?
+         :if input-available?
            :then [
-             s get
+             input get
              _ (put [])
-             result (go (conj acc s))
+             result (take-rest-loop (conj acc input))
            ]
            :else [
-             result (m-result (reverse acc))
+             result (always (reverse acc))
            ]]
           result))]
-  (go [])))
+  (take-rest-loop [])))
 
 (defn take-while1
   "Matches input as long as pred returns 'true'. This parser returns
@@ -219,19 +219,19 @@
    This parser will fail if a first match is not accomplished."
   [pred]
   (do-parser
-    [input-checker get
-     :if (empty? input-checker)
+    [input get
+     :if (empty? input)
        :then [_ demand-input]
        :else []
-     current-input get
-     :let [[h t] (span pred current-input)]
-     :if (empty? h)
-       :then [_ (fail-parser "take-while-1")]
-       :else [_ (put t)]
-     :if (empty? t)
+     input get
+     :let [[pre post] (span pred input)]
+     :if (empty? pre)
+       :then [_ (fail-parser "take-while1")]
+       :else [_ (put post)]
+     :if (empty? post)
        :then [remainder (take-while pred)
-              result (m-result (concat h remainder))]
-       :else [result (m-result h)]]
+              result (always (concat pre remainder))]
+       :else [result (always pre)]]
      result))
 
 (def any-token
@@ -289,7 +289,7 @@
   "Matches one or more digit characters and returns the number parsed
   in base 10."
   (with-parser
-    (<$> (comp #(Integer/parseInt %) #(apply str %))
+    (<$> (comp #(Integer/parseInt %) str/join)
          (many1 digit))))
 
 (def whitespace
@@ -306,33 +306,38 @@
     (char \space)))
 
 (def spaces
+  "Matches many spaces."
   (with-parser
     (many space)))
 
 (def skip-spaces
+  "Skips many spaces."
   (with-parser
     (skip-many space)))
 
 (def skip-whitespaces
+  "Skips many whitespaces."
   (with-parser
     (skip-many whitespace)))
 
 (def end-of-input
   "Matches only when the end-of-input has been reached, otherwise
   it fails. This parser returns a nil value."
-  (fn [i0 m0 ff sf]
-    (if (empty? i0)
-      (if (complete? m0)
-        (sf i0 m0 nil)
+  (fn [input0 more0 err-fn0 ok-fn0]
+    (if (empty? input0)
+      (if (complete? more0)
+        (ok-fn0 input0 more0 nil)
         (letfn [
-          (new-ff [i1 m1 _ _]
-            (add-parser-stream i0 m0 i1 m1
-                               (fn [i2 m2] (sf i2 m2 nil))))
-          (new-sf [i1 m1 _]
-            (add-parser-stream i0 m0 i1 m1
-                               (fn [i2 m2] (ff i2 m2 [] "end-of-input"))))]
-        (demand-input i0 m0 new-ff new-sf)))
-      (ff i0 m0 [] "end-of-input"))))
+          (err-fn [input1 more1 _ _]
+            (add-parser-stream input0 more0 input1 more1
+                               (fn [input2 more2]
+                                  (ok-fn0 input2 more2 nil))))
+          (ok-fn [input1 more1 _]
+            (add-parser-stream input0 more0 input1 more1
+                               (fn [input2 more2]
+                                  (err-fn input2 more2 [] "end-of-input"))))]
+        (demand-input input0 more0 err-fn ok-fn)))
+      (err-fn0 input0 more0 [] "end-of-input"))))
 
 (def at-end?
   "Parser that never fails, it returns 'true' when the end-of-input
@@ -344,7 +349,7 @@
   "Parser that matches different end-of-line characters/sequences.
   This parser returns a nil value."
   (with-parser
-    (<|> (*> (char \newline) (m-result nil))
-         (*> (string "\r\n") (m-result nil)))))
+    (<|> (*> (char \newline) (always nil))
+         (*> (string "\r\n") (always nil)))))
 
 

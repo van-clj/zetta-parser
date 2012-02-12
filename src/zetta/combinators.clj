@@ -13,12 +13,12 @@
 
 (defn <?>
   "Allows to add an error message to a given parser p."
-  [p err-msg]
-  (fn [i0 m0 ff sf]
+  [parser err-msg]
+  (fn [input0 more0 err-fn0 ok-fn]
     (letfn [
-      (new-ff [i0 m0 errors msg]
-        (ff i0 m0 (conj errors err-msg) msg))]
-    (p i0 m0 new-ff sf))))
+      (err-fn [input0 more0 errors msg]
+        (err-fn0 input0 more0 (conj errors err-msg) msg))]
+    (parser input0 more0 err-fn0 ok-fn))))
 
 (defn many
   "Applies zero or more times a parser p."
