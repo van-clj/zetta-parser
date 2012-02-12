@@ -154,6 +154,9 @@
   (fn failed-parser [i0 m0 ff _sf]
     (ff i0 m0 [] (str "Failed reading: " msg))))
 
+(defn always [a]
+  (fn new-parser [i0 m0 ff sf] (sf i0 m0 a)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Parser Monad implementation
@@ -162,7 +165,7 @@
 
 (defmonad parser-m
   [ m-result (fn result-fn [a]
-               (fn new-parser [i0 m0 ff sf] (sf i0 m0 a)))
+               (always a))
 
     m-bind   (fn bind-fn [p f]
                (fn parser-continuation [i0 m0 ff sf]
