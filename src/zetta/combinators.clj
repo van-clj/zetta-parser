@@ -26,7 +26,7 @@
   (letfn [
     (many-v []
       (with-parser
-        (<|> (some-v) (m-result []))))
+        (<|> (some-v) (always []))))
     (some-v []
       (do-parser
         [h p
@@ -52,7 +52,7 @@
   is returned."
   [default-val p]
   (with-parser
-    (<|> p (m-result default-val))))
+    (<|> p (always default-val))))
 
 (defn many1
   "Applies one or more times a parser p."
@@ -72,7 +72,7 @@
     (<$> cons
          p
          (<|> (*> s (sep-by1 p s))
-              (m-result [])))))
+              (always [])))))
 
 (defn sep-by
   "Applies zero or more times the parser p separated by parser s."
@@ -81,25 +81,25 @@
     (<|>  (<$> cons
                p
                (<|> (*> s (sep-by1 p s))
-                    (m-result [])))
-          (m-result []))))
+                    (always [])))
+          (always []))))
 
 (defn many-till
   "Applies the parser p zero or more times until the parser end
   is successful."
   [p end]
   (with-parser
-    (<|> (*> end (m-result []))
+    (<|> (*> end (always []))
          (>>= p (fn [h]
          (>>= (many-till p end) (fn [t]
-         (m-result (cons h t)))))))))
+         (always (cons h t)))))))))
 
 (defn skip-many
   "Skip zero or more applications of parser p."
   [p]
   (with-parser
     (<|> (*> p (skip-many p))
-         (m-result []))))
+         (always nil))))
 
 (defn skip-many1
   "Skip one or more applications of parser p."
