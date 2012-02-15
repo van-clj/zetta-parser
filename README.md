@@ -8,6 +8,10 @@ Basic parsers can be found in `zetta.parser.seq`, this parsers will work
 with mostly any type of items you find on a stream, some others such
 as `string` and `number` expect to process a stream of characters.
 
+## Install
+
+[org.van-clj/zetta-parser "0.0.2"]
+
 ## Usage
 
 zetta-parser provides several namespaces, each with an specific functionality:
