@@ -275,11 +275,33 @@
   matched character."
   (satisfy? #(Character/isDigit %)))
 
+; Using the clojure LispReader, code found on stackoverflow
+; http://stackoverflow.com/questions/2640169/whats-the-easiest-way-to-parse-numbers-in-clojure
+(let [m (.getDeclaredMethod clojure.lang.LispReader
+                            "matchNumber"
+                            (into-array [String]))]
+  (.setAccessible m true)
+  (defn- read-number [s]
+    (.invoke m clojure.lang.LispReader (into-array [s]))))
+
+(def double-or-long
+  (letfn [
+    (dot-or-digit [] (do-parser [
+      c  (<|> digit (char \.))
+      :if (= c \.)
+      :then
+        [result (<$> #(cons \. %) (many1 digit))]
+      :else
+        [result (<$> #(cons c %) (<|> (dot-or-digit)
+                                      (always [])))]]
+      result))]
+    (<$> cons digit (dot-or-digit))))
+
 (def number
   "Matches one or more digit characters and returns the number parsed
   in base 10."
-  (<$> (comp #(Integer/parseInt %) str/join)
-       (many1 digit)))
+  (<$> (comp read-number str/join)
+       double-or-long))
 
 (def whitespace
   "Matches any character that is considered a whitespace,

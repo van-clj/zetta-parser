@@ -154,10 +154,31 @@
   (let [result (parse-once (p/not-char #{\,}) ",")]
     (is (failure? result))))
 
-(deftest number-test
+(deftest test-double-or-long
+  (let [result (parse-once p/double-or-long "123")]
+    (is (done? result))
+    (is (= (seq "123") (:result result))))
+  (let [result (parse-once p/double-or-long "1.23")]
+    (is (done? result))
+    (is (= (seq "1.23") (:result result)))))
+
+(deftest number-test-small
   (let [result (parse-once p/number "123")]
     (is (done? result))
-    (is (= 123 (:result result)))))
+    (is (= 123 (:result result)))
+    (is (= Long (type (:result result))))))
+
+(deftest number-test-big
+  (let [result (parse-once p/number "11111111111111111111")]
+    (is (done? result))
+    (is (= 11111111111111111111 (:result result)))
+    (is (= clojure.lang.BigInt (type (:result result))))))
+
+(deftest number-test-double
+  (let [result (parse-once p/number "3.1415")]
+    (is (done? result))
+    (is (= 3.1415 (:result result)))
+    (is (= Double (type (:result result))))))
 
 (deftest number-no-initial-match-test
   (let [result (parse-once p/number "john doe")]
