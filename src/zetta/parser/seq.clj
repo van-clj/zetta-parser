@@ -27,12 +27,12 @@
    input via a continuation."
   (fn [input0 more0 err-fn0 ok-fn0]
     (if (complete? more0)
-      (err-fn0 input0 more0 ["demand-input"] "not enough input")
+      #(err-fn0 input0 more0 ["demand-input"] "not enough input")
       (letfn [
         (err-fn [input more]
-          (err-fn0 input more ["demand-input"] "not enough input"))
+          #(err-fn0 input more ["demand-input"] "not enough input"))
         (ok-fn [input more]
-          (ok-fn0 input more nil))]
+          #(ok-fn0 input more nil))]
       (prompt input0 more0 err-fn ok-fn)))))
 
 (def want-input?
@@ -41,11 +41,11 @@
    'false' if the end of all input has been reached."
   (fn [input0 more0 _err-fn ok-fn0]
     (cond
-      (not (empty? input0)) (ok-fn0 input0 more0 true)
-      (complete? more0) (ok-fn0 input0 more0 false)
+      (not (empty? input0)) #(ok-fn0 input0 more0 true)
+      (complete? more0) #(ok-fn0 input0 more0 false)
       :else
-        (letfn [(err-fn [input more] (ok-fn0 input more false))
-                (ok-fn [input more] (ok-fn0 input more true))]
+        (letfn [(err-fn [input more] #(ok-fn0 input more false))
+                (ok-fn [input more] #(ok-fn0 input more true))]
         (prompt input0 more0 err-fn ok-fn)))))
 
 (defn ensure
@@ -54,17 +54,17 @@
   [n]
   (fn [input0 more0 err-fn ok-fn]
     (if (>= (count input0) n)
-      (ok-fn input0 more0 input0)
+      #(ok-fn input0 more0 input0)
       (with-parser
         ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
 
 (def get
   (fn [input0 more0 _err-fn ok-fn]
-    (ok-fn input0 more0 input0)))
+    #(ok-fn input0 more0 input0)))
 
 (defn put [s]
   (fn [_input0 more0 _err-fn ok-fn]
-    (ok-fn s more0 nil)))
+    #(ok-fn s more0 nil)))
 
 (defn satisfy?
   "The parser 'satisfy pred' succeeds for any item for which the
@@ -72,7 +72,7 @@
    parsed."
   [pred]
   (do-parser
-    [input     (ensure 1)
+    [input (ensure 1)
      :let  [item (first input)]
      :if (pred item)
        :then [
@@ -332,7 +332,7 @@
   (fn [input0 more0 err-fn0 ok-fn0]
     (if (empty? input0)
       (if (complete? more0)
-        (ok-fn0 input0 more0 nil)
+        #(ok-fn0 input0 more0 nil)
         (letfn [
           (err-fn [input1 more1 _ _]
             (add-parser-stream input0 more0 input1 more1
@@ -343,7 +343,7 @@
                                (fn [input2 more2]
                                   (err-fn input2 more2 [] "end-of-input"))))]
         (demand-input input0 more0 err-fn ok-fn)))
-      (err-fn0 input0 more0 [] "end-of-input"))))
+      #(err-fn0 input0 more0 [] "end-of-input"))))
 
 (def at-end?
   "Parser that never fails, it returns 'true' when the end-of-input

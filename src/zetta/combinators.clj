@@ -17,7 +17,7 @@
   (fn [input0 more0 err-fn0 ok-fn]
     (letfn [
       (err-fn [input0 more0 errors msg]
-        (err-fn0 input0 more0 (conj errors err-msg) msg))]
+        #(err-fn0 input0 more0 (conj errors err-msg) msg))]
     (parser input0 more0 err-fn0 ok-fn))))
 
 (defn many

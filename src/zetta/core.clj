@@ -84,11 +84,26 @@
   will be shown on the final result."
   [msg]
   (fn failed-parser [input0 more0 err-fn _ok-fn]
-    (err-fn input0 more0 [] (str "Failed reading: " msg))))
+    #(err-fn input0 more0 [] (str "Failed reading: " msg))))
+
+(defn- p-trampoline
+  "Exact copy of the `clojure.core/trampoline` function,
+  however it checks if the returned function has a :stop
+  meta to return. This is used by the prompt and
+  the parse functions."
+  ([f]
+     (let [ret (f)]
+       ;(println ret)
+       (if (and (fn? ret)
+                (-> ret meta :stop not))
+         (recur ret)
+         ret)))
+  ([f & args]
+     (p-trampoline #(apply f args))))
 
 (defn always [a]
   (fn new-parser [input0 more0 err-fn ok-fn]
-      (ok-fn input0 more0 a)))
+    #(ok-fn input0 more0 a)))
 
 (defn bind-parsers [p f]
   (fn parser-continuation [input0 more0 err-fn ok-fn0]
@@ -155,10 +170,12 @@
   "This is used for continuations of parsers (when there is not
   enough input available for the parser to either succeed or fail)."
   [input0 _more0 err-fn ok-fn]
-  (fn [new-input]
-    (if (empty? new-input)
-      (err-fn input0 complete)
-      (ok-fn (concat input0 (seq new-input)) incomplete))))
+  (with-meta
+    (fn [new-input]
+      (if (empty? new-input)
+        (p-trampoline err-fn input0 complete)
+        (p-trampoline ok-fn (concat input0 (seq new-input)) incomplete)))
+    {:stop true}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -172,7 +189,7 @@
   will require more input in other to finish. The parser continuation
   will halt as soon as an empty seq is given."
   [parser input]
-  (parser (seq input) incomplete failure-fn success-fn))
+  (p-trampoline parser (seq input) incomplete failure-fn success-fn))
 
 (defn parse-once
   "Parses the given input with a parser, this may return a result that
