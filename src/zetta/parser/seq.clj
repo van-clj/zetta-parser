@@ -247,6 +247,28 @@
       (<?> (satisfy? #(= % c))
            (str "failed parser char: " c))))
 
+(def whitespace
+  "Matches any character that is considered a whitespace,
+  it uses 'Character/isWhitespace' internally. This parser
+  returns the whitespace character."
+  (satisfy? #(Character/isWhitespace %)))
+
+(def space
+  "Matches any character that is equal to the character
+  \\space. This parser returns the \\space character."
+  (char \space))
+
+(def spaces
+  "Matches many spaces."
+  (many space))
+
+(def skip-spaces
+  "Skips many spaces."
+  (skip-many space))
+
+(def skip-whitespaces
+  "Skips many whitespaces."
+  (skip-many whitespace))
 
 (defn not-char
   "Matches only a token that is not equal to character
@@ -286,45 +308,23 @@
 
 (def double-or-long
   (letfn [
-    (dot-or-digit [] (do-parser [
-      c  (<|> digit (char \.))
-      :if (= c \.)
-      :then
-        [result (<$> #(cons \. %) (many1 digit))]
-      :else
-        [result (<$> #(cons c %) (<|> (dot-or-digit)
-                                      (always [])))]]
-      result))]
-    (<$> cons digit (dot-or-digit))))
+    (digit-or-dot []
+      (do-parser [
+        h (<|> digit (char \.))
+        :if (= h \.)
+        :then [ t (many digit) ]
+        :else [ t (<|> (digit-or-dot) (always [])) ]]
+        (cons h t)))]
+  (do-parser [
+    h digit
+    t (<|> (digit-or-dot) (always []))]
+    (cons h t))))
 
 (def number
   "Matches one or more digit characters and returns the number parsed
   in base 10."
   (<$> (comp read-number str/join)
        double-or-long))
-
-(def whitespace
-  "Matches any character that is considered a whitespace,
-  it uses 'Character/isWhitespace' internally. This parser
-  returns the whitespace character."
-  (satisfy? #(Character/isWhitespace %)))
-
-(def space
-  "Matches any character that is equal to the character
-  \\space. This parser returns the \\space character."
-  (char \space))
-
-(def spaces
-  "Matches many spaces."
-  (many space))
-
-(def skip-spaces
-  "Skips many spaces."
-  (skip-many space))
-
-(def skip-whitespaces
-  "Skips many whitespaces."
-  (skip-many whitespace))
 
 (def end-of-input
   "Matches only when the end-of-input has been reached, otherwise
