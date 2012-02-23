@@ -1,0 +1,5 @@
+= Roman Gonzalez (No release date)
+	* Fix bug on the number parser, (wasn't parsing one digit numbers)
+	* Reimplemented the many parser combinator to reduce StackOverflows
+	* Added trampoline support to zetta-parser, hopefully this will avoid
+	StackOverflows alltogether :-D
