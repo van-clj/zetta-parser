@@ -23,15 +23,13 @@
 (defn many
   "Applies zero or more times a parser p."
   [p]
-  (letfn [
-    (many-v []
-      (<|> (some-v) (always [])))
-    (some-v []
-      (do-parser
-        [h p
-         t (many-v)] (cons h t)))
-    ]
-    (many-v)))
+  (do-parser
+    [h (<|> p (always []))
+    :if (= h [])
+    :then [ result (always []) ]
+    :else [ t (many p)
+            result (always (cons h t)) ]]
+    result))
 
 (defn choice [ps]
   "It will try to parse the input using each of the
