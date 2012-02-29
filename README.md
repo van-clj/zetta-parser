@@ -10,7 +10,9 @@ as `string` and `number` expect to process a stream of characters.
 
 ## Install
 
+```clojure
 [org.van-clj/zetta-parser "0.0.2"]
+```
 
 ## Usage
 
@@ -148,6 +150,11 @@ a failure or a successful parsed result.
 
 The `parse-once` function will behave like the parse function of any of the
 other parser libraries.
+
+## I want more info!
+
+For more info, please clone the project and execute lein marg to get a great
+summary of the `zetta.parser.seq` and `zetta.combinators` namespaces.
 
 ## Full Examples
 
