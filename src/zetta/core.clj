@@ -5,7 +5,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser result types
+;; ## Parser result types
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -14,7 +14,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser result query functions
+;; ## Parser result query functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -37,9 +37,15 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser more-input constants
+;; ## Parser more-input constants
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; This contants will serve as flags, and they will tell us if there is
+;; more possible input available to the parser, when parsers require more
+;; input and the `more` parameter has a value of complete, then the parser will
+;; fail, otherwise if the `more` parameter has a value of incomplete, a
+;; continuation function will be returned to continue the parsing.
 
 (def
   ^{:doc "Constant value that indicates if the stream
@@ -52,21 +58,35 @@
   incomplete ::incomplete)
 
 (defn complete?
-  "Test if equal to the complete constant or not."
+  "Test More flag is equal to the complete constant or not."
   [m] (= m complete))
 
 (defn incomplete?
-  "Test if equal to the incomplete constant or not."
+  "Test More flag is equal to the incomplete constant or not."
   [m] (= m incomplete))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser Monad utility functions
+;; ## Parser utility functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- p-trampoline
+  "Exact copy of the `clojure.core/trampoline` function, however it checks if
+  the returned function has a :stop meta to return. This is used by the prompt
+  and parse functions."
+  ([f]
+     (let [ret (f)]
+       (if (and (fn? ret)
+                (-> ret meta :stop not))
+         (recur ret)
+         ret)))
+  ([f & args]
+     (p-trampoline #(apply f args))))
+
 (defn- concat-more
-  "Monoid mappend function for the More values complete and incomplete."
+  "Merges two More flag values ('complete' and 'incomplete') and returns a
+  new flag value."
   [m1 m2]
   (cond
     (complete? m1) complete
@@ -74,10 +94,27 @@
     :else incomplete))
 
 (defn add-parser-stream
-  "Concats the input and more flag from two different parsers and calls
+  "Concats the input and `more` flag from two different parsers and calls
   the function f with the result."
   [input0 more0 input1 more1 f]
   (f (concat input0 input1) (concat-more more0 more1)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; ## Basic parsers primitives
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; ### Parsers will be functions that receive 4 parameters:
+;;
+;; * `input`: The stream of characters (or items) we are actually parsing.
+;; * `more` flag: A flag that indicates if there is more input coming up or
+;;   not.
+;; * `ok-fn`: A continuation function that will be executed when parsing
+;;   has been executed without any failures.
+;; * `err-fn`: A continuation function that will be executed when an error
+;;   had occured when parsing.
 
 (defn fail-parser
   "Parser that will always fail, you may provide an error message msg that
@@ -86,32 +123,39 @@
   (fn failed-parser [input0 more0 err-fn _ok-fn]
     #(err-fn input0 more0 [] (str "Failed reading: " msg))))
 
-(defn- p-trampoline
-  "Exact copy of the `clojure.core/trampoline` function,
-  however it checks if the returned function has a :stop
-  meta to return. This is used by the prompt and
-  the parse functions."
-  ([f]
-     (let [ret (f)]
-       ;(println ret)
-       (if (and (fn? ret)
-                (-> ret meta :stop not))
-         (recur ret)
-         ret)))
-  ([f & args]
-     (p-trampoline #(apply f args))))
-
-(defn always [a]
+(defn always
+  "Returns a parser that will always succeed, this parser will return the
+  parameter given."
+  [a]
   (fn new-parser [input0 more0 err-fn ok-fn]
     #(ok-fn input0 more0 a)))
 
-(defn bind-parsers [p f]
+(defn bind-parsers
+  "Receives a parser and a continuation function, the result of the parser is
+  going to be given as a parameter to the f function, and this function should
+  return a new parser.
+
+  Example:
+
+    ; Everytime we parse an 'a' character and return a \"hello\" string
+    (bind-parsers (char \\a) (fn [achr] (always \"hello\")))
+  "
+  [p f]
   (fn parser-continuation [input0 more0 err-fn ok-fn0]
     (letfn [
       (ok-fn [input1 more1 a] ((f a) input1 more1 err-fn ok-fn0))]
       (p input0 more0 err-fn ok-fn))))
 
-(defn join-parsers [p1 p2]
+(defn join-parsers
+  "Merges two parsers together and returns a new parser that will execute
+  parser p1, in case this fails, it is going to execute parser p2.
+
+  Example:
+
+    ; Parses either the character a or the character b
+    (join-parsers (char \\a) (char \\b))
+  "
+  [p1 p2]
   (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
                  (letfn [
                    (err-fn [input1 more1 _ _]
@@ -120,7 +164,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser Monad implementation
+;; ## Parser Monad implementation
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -138,36 +182,42 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser building macros
+;; ## Parser building macros
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmacro with-parser
-  "Allows the use of monadic functions with the parser-m monad binded
-  to m-bind and m-result."
+  "Allows the use of monadic functions m-bind and m-result which are
+  binded to the parser-m monad."
   [& forms]
   `(with-monad parser-m ~@forms))
 
 (defmacro do-parser
-  "Allows the use of monadic do statements with the parser-m monad binded
-  to m-bind and m-result."
+  "Allows the use of 'domonad' statements with the m-bind and m-result
+  functions binded to the parser-m monad."
   [steps result]
   `(domonad parser-m ~steps ~result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Continuation Results
+;; ## Continuation Results
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- failure-fn [input0 _more0 stack msg]
+(defn- failure-fn
+  "The initial `err-fn` for all parsers that are executed on the zetta-parser
+  library."
+  [input0 _more0 stack msg]
   (ResultFailure. input0 stack msg))
 
-(defn- success-fn [input0 _more0 result]
+(defn- success-fn
+  "The initial `ok-fn` for all parsers that are executed on the zetta-parser
+  library."
+  [input0 _more0 result]
   (ResultDone. input0 result))
 
 (defn prompt
-  "This is used for continuations of parsers (when there is not
+  "This is parser is used to return continuations (when there is not
   enough input available for the parser to either succeed or fail)."
   [input0 _more0 err-fn ok-fn]
   (with-meta
@@ -179,22 +229,22 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parsing functions
+;; ## Parsing functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn parse
-  "Parses the given input with a parser, this may return a result that
-  could either be a success, a failure , or a continuation that
+  "Uses the given parser to process the input, this function may return a
+  result that could either be a success, a failure, or a continuation that
   will require more input in other to finish. The parser continuation
   will halt as soon as an empty seq is given."
   [parser input]
   (p-trampoline parser (seq input) incomplete failure-fn success-fn))
 
 (defn parse-once
-  "Parses the given input with a parser, this may return a result that
+  "Uses the given parser to process the input, this may return a result that
   could either be a success or failure result (All input must be available
-  at once)."
+  at once when using this function)."
   [parser input]
   (let [result (parse parser input)]
     (if (partial? result)
@@ -203,38 +253,38 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Monad & Applicative utility functions
+;; ## Monad & Applicative utility functions
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Haskell like operators
+;; ### Haskell's monad operators
 
 (defn >>=
-  "Equivalent to the m-bind function for monads."
+  "Alias for bind-parsers function."
   [p f]
   (bind-parsers p f))
 
-(defn- bind-ignore-step [mresult p1]
+(defn- bind-ignore-step
+  "Internal function used by the `>>` macro."
+  [mresult p1]
   `(>>= ~mresult (fn [~'_]
    ~p1)))
 
 (defmacro >>
-  "Composes two or more monadic values returning the
-   result of the last one."
+  "Composes two or more parsers returning the result of the rightmost one."
   [& more]
   (reduce bind-ignore-step more))
 
-;; Haskell Applicative operators
+;; ### Haskell's applicative operators
 
 (defmacro *>
-  "Composes two or more applicative functors, returning the
-   result value of the last one."
+  "Composes two or more parsers, returning the result value of the rightmost
+  one."
   [& more]
   `(>> ~@more))
 
 (defmacro <*
-  "Composes two or more applicative functors, returning the
-   result value of the first one."
+  "Composes two or more parsers, returning the result of the leftmost one."
   [& more]
   (let [step (first more)
         steps (rest more)]
@@ -243,19 +293,19 @@
         (always ~'result#))))))
 
 (defn <$>
-  "Maps the function f to the results of the given applicative functors,
-  each applicative functor result value is going to be a parameter for
-  function f.
+  "Maps the function f to the results of the given parsers, applicative
+  functor result is going to be a parameter for function f.
 
   Example:
+
     (<$> + number number)
 
-  Where number is parser that will return a number from the input stream."
+  Where `number` is a parser that will return a number from the parsed input."
   [f & more]
   (with-parser
     (m-bind (m-seq more) (fn [params]
     (m-result (apply f params))))))
 
 (def <|>
-  "Equivalent to the m-plus function for monads."
+  "Alias for join-parsers function."
   join-parsers)

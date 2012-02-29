@@ -6,13 +6,14 @@
 
 (deftest take-with-test
   (let [result (parse-once
-                 (p/take-with 4 (partial every? #(Character/isDigit %)))
+                 (p/take-with 4 (partial 
+                              every? #(Character/isDigit ^java.lang.Character %)))
                  "12345")]
   (is (= "1234" (:result result)))))
 
 (deftest take-with-no-initial-match-test
   (let [result (parse-once
-                 (p/take-with 4 (partial every? #(Character/isDigit %)))
+                 (p/take-with 4 (partial every? #(Character/isDigit ^java.lang.Character %)))
                  "12ab3")]
   (is (failure? result))))
 
@@ -30,14 +31,14 @@
 
 (deftest take-while-test
   (let [result (parse-once
-                 (p/take-while #(Character/isLetter %))
+                 (p/take-while #(Character/isLetter ^java.lang.Character %))
                  "this is just a test")]
     (is (= "this" (:result result)))
     (is (= (seq " is just a test") (:remainder result)))))
 
 (deftest take-while-no-initial-match-test
   (let [result (parse-once
-                 (p/take-while #(Character/isLetter %))
+                 (p/take-while #(Character/isLetter ^java.lang.Character %))
                  " this is just a test")]
     (is (done? result))
     (is (= "" (:result result)))
@@ -66,14 +67,14 @@
 
 (deftest take-while1-test
   (let [result (parse-once
-                 (p/take-while1 #(Character/isLetter %))
+                 (p/take-while1 #(Character/isLetter ^java.lang.Character %))
                  "this is just a test")]
     (is (= "this" (:result result)))
     (is (= (seq " is just a test") (:remainder result)))))
 
 (deftest take-while1-no-initial-match-test
   (let [result (parse-once
-                 (p/take-while1 #(Character/isLetter %))
+                 (p/take-while1 #(Character/isLetter ^java.lang.Character %))
                  " this is just a test")]
     (is (failure? result))))
 

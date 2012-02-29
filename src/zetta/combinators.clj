@@ -7,18 +7,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; Parser combinators
+;; ## Parser combinators
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn <?>
   "Allows to add an error message to a given parser p."
-  [parser err-msg]
+  [p err-msg]
   (fn [input0 more0 err-fn0 ok-fn]
     (letfn [
       (err-fn [input0 more0 errors msg]
         #(err-fn0 input0 more0 (conj errors err-msg) msg))]
-    (parser input0 more0 err-fn0 ok-fn))))
+    (p input0 more0 err-fn0 ok-fn))))
 
 (defn many
   "Applies zero or more times a parser p."
@@ -31,10 +31,10 @@
             result (always (cons h t)) ]]
     result))
 
-(defn choice [ps]
-  "It will try to parse the input using each of the
-  given parsers, it will halt on the first parser that
-  successfuly parse the input."
+(defn choice
+  "Combinator that tries to parse the input using each of the given parsers,
+  it will halt on the first parser that can successfuly parse the input."
+  [ps]
   (reduce <|> ps))
 
 (defn replicate
@@ -44,8 +44,7 @@
     (m-seq (core/replicate n p))))
 
 (defn option
-  "Applies parser p to the input, if p fails then default-val
-  is returned."
+  "Applies parser p to the input, if p fails then default-val is returned."
   [default-val p]
   (<|> p (always default-val)))
 
@@ -55,6 +54,8 @@
   (<$> cons p (many p)))
 
 (defn around
+  "Combinator that will apply the parser 'content' in between the parser
+  'sep.'"
   [sep content]
   (*> sep (<* content sep)))
 
@@ -76,8 +77,7 @@
        (always [])))
 
 (defn many-till
-  "Applies the parser p zero or more times until the parser end
-  is successful."
+  "Applies the parser p zero or more times until the parser end is successful."
   [p end]
   (<|> (*> end (always []))
        (>>= p (fn [h]
