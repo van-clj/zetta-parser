@@ -11,7 +11,7 @@ as `string` and `number` expect to process a stream of characters.
 ## Install
 
 ```clojure
-[org.van-clj/zetta-parser "0.0.2"]
+[org.van-clj/zetta-parser "0.0.3"]
 ```
 
 ## Usage
@@ -153,7 +153,7 @@ other parser libraries.
 
 ## I want more info!
 
-For more info, please clone the project and execute lein marg to get a great
+For more info, please clone the project and execute `lein marg` to get a great
 summary of the `zetta.parser.seq` and `zetta.combinators` namespaces.
 
 ## Full Examples
@@ -192,6 +192,6 @@ summary of the `zetta.parser.seq` and `zetta.combinators` namespaces.
 
 ## License
 
-Copyright (C) 2011 Roman Gonzalez.
+Copyright (C) 2012 Roman Gonzalez.
 
 Distributed under the Eclipse Public License, the same as Clojure.
