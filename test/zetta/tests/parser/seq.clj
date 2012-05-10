@@ -170,11 +170,11 @@
   (let [result (parse-once p/number "1")]
     (is (done? result))
     (is (= 1 (:result result)))
-    (is (= Long (type (:result result))))))
+    (is (= Long (type (:result result)))))
   (let [result (parse-once p/number "123")]
     (is (done? result))
     (is (= 123 (:result result)))
-    (is (= Long (type (:result result)))))
+    (is (= Long (type (:result result))))))
 
 (deftest number-test-big
   (let [result (parse-once p/number "11111111111111111111")]
