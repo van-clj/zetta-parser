@@ -6,7 +6,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/algo.monads "0.1.3-20120206.105742-1"]]
+                 [org.clojure/algo.monads "0.1.3-SNAPSHOT"]]
   :dev-dependencies [[lein-autodoc "0.9.0"]
                      [marginalia "0.7.0-SNAPSHOT"]
                      [lein-marginalia "0.7.0-SNAPSHOT"]])
