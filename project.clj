@@ -1,4 +1,4 @@
-(defproject org.van-clj/zetta-parser "0.0.4"
+(defproject org.van-clj/zetta-parser "0.0.5-SNAPSHOT"
   :description "Powerful monadic parser combinator in Clojure (Haskell attoparsec's port)"
   :author "Roman Gonzalez"
   :warn-on-reflection true
