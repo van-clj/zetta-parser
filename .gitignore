@@ -8,3 +8,4 @@
 /.lein-deps-sum
 docs/*
 autodoc/**
+/target
