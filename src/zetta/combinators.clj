@@ -1,8 +1,7 @@
 (ns zetta.combinators
   (:refer-clojure :exclude [replicate])
-  (:require [clojure.core :as core])
-  (:use [clojure.algo.monads :only [m-seq]])
-
+  (:require [clojure.core :as core]
+            [monads.core :as monad])
   (:use zetta.core))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -40,8 +39,7 @@
 (defn replicate
   "Apply the given parser 'p' 'n' times, returning every result."
   [n p]
-  (with-parser
-    (m-seq (core/replicate n p))))
+  (monad/seq (core/replicate n p)))
 
 (defn option
   "Applies parser p to the input, if p fails then default-val is returned."
@@ -94,4 +92,3 @@
   "Skip one or more applications of parser p."
   [p]
   (*> p (skip-many p)))
-

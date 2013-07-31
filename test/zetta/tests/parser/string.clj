@@ -6,7 +6,7 @@
 
 (deftest take-with-test
   (let [result (parse-once
-                 (p/take-with 4 (partial 
+                 (p/take-with 4 (partial
                               every? #(Character/isDigit ^java.lang.Character %)))
                  "12345")]
   (is (= "1234" (:result result)))))
@@ -77,5 +77,3 @@
                  (p/take-while1 #(Character/isLetter ^java.lang.Character %))
                  " this is just a test")]
     (is (failure? result))))
-
-

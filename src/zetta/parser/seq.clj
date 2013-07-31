@@ -2,10 +2,11 @@
   (:refer-clojure
    :exclude [ensure get take take-while char some replicate])
   (:require [clojure.core :as core]
-            [clojure.string :as str])
-
+            [clojure.string :as str]
+            [monads.core :as monad])
   (:use zetta.core)
-  (:use zetta.combinators))
+  (:use zetta.combinators)
+  (:import [zetta.core Parser]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -25,49 +26,53 @@
 
 (def demand-input
   "Basic parser that will ensure the request of more input via a continuation."
-  (fn [input0 more0 err-fn0 ok-fn0]
-    (if (complete? more0)
-      #(err-fn0 input0 more0 ["demand-input"] "not enough input")
-      (letfn [
-        (err-fn [input more]
-          #(err-fn0 input more ["demand-input"] "not enough input"))
-        (ok-fn [input more]
-          #(ok-fn0 input more nil))]
-      (prompt input0 more0 err-fn ok-fn)))))
+  (Parser.
+   (fn [input0 more0 err-fn0 ok-fn0]
+     (if (complete? more0)
+       #(err-fn0 input0 more0 ["demand-input"] "not enough input")
+       (letfn [
+               (err-fn [input more]
+                 #(err-fn0 input more ["demand-input"] "not enough input"))
+               (ok-fn [input more]
+                 #(ok-fn0 input more nil))]
+         (prompt input0 more0 err-fn ok-fn))))))
 
 (def want-input?
   "Parser that returns `true` if any input is available either immediately or
   on demand, and `false` if the end of all input has been reached.
 
   **WARNING**: This parser always succeeds."
-  (fn [input0 more0 _err-fn ok-fn0]
-    (cond
+  (Parser.
+   (fn [input0 more0 _err-fn ok-fn0]
+     (cond
       (not (empty? input0)) #(ok-fn0 input0 more0 true)
       (complete? more0) #(ok-fn0 input0 more0 false)
       :else
-        (letfn [(err-fn [input more] #(ok-fn0 input more false))
-                (ok-fn [input more] #(ok-fn0 input more true))]
-        (prompt input0 more0 err-fn ok-fn)))))
+      (letfn [(err-fn [input more] #(ok-fn0 input more false))
+              (ok-fn [input more] #(ok-fn0 input more true))]
+        (prompt input0 more0 err-fn ok-fn))))))
 
 (defn ensure
   "If at least `n` items of input are available, return the current input,
   otherwise fail."
   [n]
-  (fn [input0 more0 err-fn ok-fn]
-    (if (>= (count input0) n)
-      #(ok-fn input0 more0 input0)
-      (with-parser
-        ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
+  (Parser.
+   (fn [input0 more0 err-fn ok-fn]
+     (if (>= (count input0) n)
+       #(ok-fn input0 more0 input0)
+       ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
 
 (def get
   "Returns the input given in the `zetta.core/parse` function."
-  (fn [input0 more0 _err-fn ok-fn]
-    #(ok-fn input0 more0 input0)))
+  (Parser.
+   (fn [input0 more0 _err-fn ok-fn]
+     #(ok-fn input0 more0 input0))))
 
 (defn put [s]
   "Sets a (possibly modified) input into the parser state."
-  (fn [_input0 more0 _err-fn ok-fn]
-    #(ok-fn s more0 nil)))
+  (Parser.
+   (fn [_input0 more0 _err-fn ok-fn]
+     #(ok-fn s more0 nil))))
 
 (defn satisfy?
   "Parser that succeeds for any item for which the predicate `pred` returns
@@ -172,7 +177,7 @@
                :then [result (take-while-loop (conj acc pre))]
                :else [result (always (conj acc pre))]
            ]
-           :else [result (m-result (conj acc pre))]]
+           :else [result (monad/do-result dummy-parser (conj acc pre))]]
            result))]
   (<$> (comp #(apply core/concat %) core/reverse)
        (take-while-loop []))))
@@ -334,21 +339,22 @@
 (def end-of-input
   "Parser that matches only when the end-of-input has been reached, otherwise
   it fails. Returns a nil value."
-  (fn [input0 more0 err-fn0 ok-fn0]
-    (if (empty? input0)
-      (if (complete? more0)
-        #(ok-fn0 input0 more0 nil)
-        (letfn [
-          (err-fn [input1 more1 _ _]
-            (add-parser-stream input0 more0 input1 more1
-                               (fn [input2 more2]
-                                  (ok-fn0 input2 more2 nil))))
-          (ok-fn [input1 more1 _]
-            (add-parser-stream input0 more0 input1 more1
-                               (fn [input2 more2]
-                                  (err-fn input2 more2 [] "end-of-input"))))]
-        (demand-input input0 more0 err-fn ok-fn)))
-      #(err-fn0 input0 more0 [] "end-of-input"))))
+  (Parser.
+   (fn [input0 more0 err-fn0 ok-fn0]
+     (if (empty? input0)
+       (if (complete? more0)
+         #(ok-fn0 input0 more0 nil)
+         (letfn [
+                 (err-fn [input1 more1 _ _]
+                   (add-parser-stream input0 more0 input1 more1
+                                      (fn [input2 more2]
+                                        (ok-fn0 input2 more2 nil))))
+                 (ok-fn [input1 more1 _]
+                   (add-parser-stream input0 more0 input1 more1
+                                      (fn [input2 more2]
+                                        (err-fn input2 more2 [] "end-of-input"))))]
+           (demand-input input0 more0 err-fn ok-fn)))
+       #(err-fn0 input0 more0 [] "end-of-input")))))
 
 (def at-end?
   "Parser that never fails, it returns `true` when the end-of-input
@@ -360,5 +366,3 @@
   This parser returns a nil value."
   (<|> (*> (char \newline) (always nil))
        (*> (string "\r\n") (always nil))))
-
-

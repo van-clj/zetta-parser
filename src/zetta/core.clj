@@ -1,7 +1,10 @@
 (ns zetta.core
-  (:use [clojure.algo.monads
-         :only
-         [defmonad defmonadfn domonad with-monad m-seq]]))
+  (:require [monads.macros :as monad-macro])
+  (:require [monads.core :as monad]
+            [clojure.algo.monads
+             :refer
+             [defmonad defmonadfn domonad with-monad m-seq]])
+  ^:clj (:import [clojure.lang IFn]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -101,6 +104,45 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+;; ## Parser Monad implementation
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare always)
+(declare bind-parsers)
+(declare fail-parser)
+(declare join-parsers)
+
+(defrecord Parser [f]
+  IFn
+  ;; (invoke [this_ a] (println "1) ERROR: " a))
+  ;; (invoke [this_ a b] (println "2)ERROR: " a b))
+  ;; (invoke [this_ a b c] (println "3) ERROR: " a b c))
+  (invoke [this_ input0 more0 err-fn ok-fn]
+    ;; (println "4)" input0 more0 err-fn ok-fn)
+    (f input0 more0 err-fn ok-fn))
+
+  ^:clj
+  (applyTo [this args] (clojure.lang.AFn/applyToHelper this args))
+
+  monad/Monad
+  (do-result [self a]
+    (always a))
+
+  (bind [self f]
+    (bind-parsers self f))
+
+  monad/MonadZero
+  (zero [_]
+    (fail-parser "MonadZero/zero"))
+
+  (plus-step [self ps]
+    (reduce join-parsers self ps)))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 ;; ## Basic parsers primitives
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -120,15 +162,17 @@
   "Parser that will always fail, you may provide an error message msg that
   will be shown on the final result."
   [msg]
-  (fn failed-parser [input0 more0 err-fn _ok-fn]
-    #(err-fn input0 more0 [] (str "Failed reading: " msg))))
+  (Parser.
+   (fn failed-parser [input0 more0 err-fn _ok-fn]
+     #(err-fn input0 more0 [] (str "Failed reading: " msg)))))
 
 (defn always
   "Returns a parser that will always succeed, this parser will return the
   parameter given."
   [a]
-  (fn new-parser [input0 more0 err-fn ok-fn]
-    #(ok-fn input0 more0 a)))
+  (Parser.
+   (fn new-parser [input0 more0 _err-fn ok-fn]
+     #(ok-fn input0 more0 a))))
 
 (defn bind-parsers
   "Receives a parser and a continuation function, the result of the parser is
@@ -141,10 +185,11 @@
     (bind-parsers (char \\a) (fn [achr] (always \"hello\")))
   "
   [p f]
-  (fn parser-continuation [input0 more0 err-fn ok-fn0]
-    (letfn [
-      (ok-fn [input1 more1 a] ((f a) input1 more1 err-fn ok-fn0))]
-      (p input0 more0 err-fn ok-fn))))
+  (Parser.
+   (fn parser-continuation [input0 more0 err-fn ok-fn0]
+     (letfn [(ok-fn [input1 more1 a]
+               ((f a) input1 more1 err-fn ok-fn0))]
+       (p input0 more0 err-fn ok-fn)))))
 
 (defn join-parsers
   "Merges two parsers together and returns a new parser that will execute
@@ -156,29 +201,12 @@
     (join-parsers (char \\a) (char \\b))
   "
   [p1 p2]
-  (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
-                 (letfn [
-                   (err-fn [input1 more1 _ _]
-                     (p2 input1 more1 err-fn0 ok-fn))]
-                 (p1 input0 more0 err-fn ok-fn))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; ## Parser Monad implementation
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmonad parser-m
-  [ m-result (fn result-fn [a]
-               (always a))
-
-    m-bind   (fn bind-fn [p f]
-               (bind-parsers p f))
-
-    m-zero   (fail-parser "m-zero")
-
-    m-plus   (fn m-plus-fn [p1 p2]
-               (join-parsers p1 p2))])
+  (Parser.
+   (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
+     (letfn [
+             (err-fn [input1 more1 _ _]
+               (p2 input1 more1 err-fn0 ok-fn))]
+       (p1 input0 more0 err-fn ok-fn)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -186,6 +214,10 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def parser-monad always)
+(def dummy-parser (parser-monad nil))
+
+;; TODO: How do we translate this to ProtocolMonads?
 (defmacro with-parser
   "Allows the use of monadic functions m-bind and m-result which are
   binded to the parser-m monad."
@@ -196,7 +228,7 @@
   "Allows the use of 'domonad' statements with the m-bind and m-result
   functions binded to the parser-m monad."
   [steps result]
-  `(domonad parser-m ~steps ~result))
+  `(monad-macro/do always ~steps ~result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -216,16 +248,17 @@
   [input0 _more0 result]
   (ResultDone. input0 result))
 
-(defn prompt
+(def prompt
   "This is parser is used to return continuations (when there is not
   enough input available for the parser to either succeed or fail)."
-  [input0 _more0 err-fn ok-fn]
-  (with-meta
-    (fn [new-input]
-      (if (empty? new-input)
-        (p-trampoline err-fn input0 complete)
-        (p-trampoline ok-fn (concat input0 (seq new-input)) incomplete)))
-    {:stop true}))
+  (Parser.
+   (fn prompt [input0 _more0 err-fn ok-fn]
+     (with-meta
+       (fn [new-input]
+         (if (empty? new-input)
+           (p-trampoline err-fn input0 complete)
+           (p-trampoline ok-fn (concat input0 (seq new-input)) incomplete)))
+       {:stop true}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -302,9 +335,10 @@
 
   Where `number` is a parser that will return a number from the parsed input."
   [f & more]
-  (with-parser
-    (m-bind (m-seq more) (fn [params]
-    (m-result (apply f params))))))
+  (bind-parsers
+   (monad/seq always more)
+   (fn [params]
+     (always (apply f params)))))
 
 (def <|>
   "Alias for join-parsers function."

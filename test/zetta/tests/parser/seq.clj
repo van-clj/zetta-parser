@@ -1,11 +1,9 @@
 (ns zetta.tests.parser.seq
   (:use clojure.test)
-
   (:use zetta.core)
   (:require [zetta.parser.seq :as p]))
 
-
-(deftest satisfy?-test
+(deftest ^:refactoring satisfy?-test
   (let [result (parse-once (p/satisfy? #(= 0 (mod % 2)))
                              [10])]
     (is (done? result))
@@ -215,4 +213,3 @@
 (deftest eol-no-initial-match-test
   (let [result (parse-once p/eol "other")]
     (is (failure? result))))
-
