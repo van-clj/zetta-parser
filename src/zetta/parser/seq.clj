@@ -1,12 +1,14 @@
 (ns zetta.parser.seq
   (:refer-clojure
    :exclude [ensure get take take-while char some replicate])
-  (:require [clojure.core :as core]
+  (:require [zetta.parser.macros :as macros])
+  (:require ^{:cljs [cljs.core :as core]}
+            [clojure.core :as core]
             [clojure.string :as str]
-            [monads.core :as monad])
-  (:use zetta.core)
-  (:use zetta.combinators)
-  (:import [zetta.core Parser]))
+            [monads.core :as monad]
+            [zetta.core :refer :all]
+            [zetta.combinators :refer :all])
+  ^:clj (:import [zetta.core Parser]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -60,7 +62,7 @@
    (fn [input0 more0 err-fn ok-fn]
      (if (>= (count input0) n)
        #(ok-fn input0 more0 input0)
-       ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
+       ((macros/>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
 
 (def get
   "Returns the input given in the `zetta.core/parse` function."
@@ -78,7 +80,7 @@
   "Parser that succeeds for any item for which the predicate `pred` returns
   `true`. Returns the item that is actually parsed."
   [pred]
-  (do-parser
+  (macros/do
     [input (ensure 1)
      :let  [item (first input)]
      :if (pred item)
@@ -94,7 +96,7 @@
   "Parser that succeeds for any item for which the predicate `pred`, returns
   `nil`."
   [pred]
-  (do-parser
+  (macros/do
     [input (ensure 1)
      :if (pred (first input))
        :then [_ (put (rest input))]
@@ -106,7 +108,7 @@
   `pred` returns `true` on the parsed input. The matched input is returned
   as a seq."
   [n pred]
-  (do-parser
+  (macros/do
     [input (ensure n)
      :let [[h t] (split-at n input)]
      :if (pred h)
@@ -138,7 +140,7 @@
 (defn skip-while
   "Parser that skips input for as long as `pred` returns `true`."
   [pred]
-  (let [skip-while-loop (do-parser
+  (let [skip-while-loop (macros/do
              [input0 get
               :let [input (drop-while pred input0)]
               _ (put input)
@@ -166,7 +168,7 @@
   [pred]
   (letfn [
     (take-while-loop [acc]
-      (do-parser
+      (macros/do
         [input0 get
          :let [[pre post] (span pred input0)]
          _ (put post)
@@ -202,7 +204,7 @@
   continuation was used to continue the parse process."
   (letfn [
     (take-rest-loop [acc]
-      (do-parser
+      (macros/do
         [input-available? want-input?
          :if input-available?
            :then [
@@ -222,7 +224,7 @@
 
    This parser will fail if a first match is not accomplished."
   [pred]
-  (do-parser
+  (macros/do
     [input get
      :if (empty? input)
        :then [_ demand-input]
@@ -319,13 +321,13 @@
 (def double-or-long
   (letfn [
     (digit-or-dot []
-      (do-parser [
+      (macros/do [
         h (<|> digit (char \.))
         :if (= h \.)
         :then [ t (many digit) ]
         :else [ t (<|> (digit-or-dot) (always [])) ]]
         (cons h t)))]
-  (do-parser [
+  (macros/do [
     h digit
     t (<|> (digit-or-dot) (always []))]
     (cons h t))))
@@ -364,5 +366,5 @@
 (def eol
   "Parser that matches different end-of-line characters/sequences.
   This parser returns a nil value."
-  (<|> (*> (char \newline) (always nil))
-       (*> (string "\r\n") (always nil))))
+  (<|> (macros/*> (char \newline) (always nil))
+       (macros/*> (string "\r\n") (always nil))))

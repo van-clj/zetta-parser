@@ -1,11 +1,8 @@
 (ns zetta.tests.core
-  (:use clojure.test)
-  (:use [clojure.algo.monads
-         :only
-         [with-monad]])
-
-  (:use zetta.core)
-  (:require [zetta.parser.seq :as p]))
+  (:require [clojure.test :refer :all]
+            [zetta.core :refer :all]
+            [zetta.parser.seq :as p])
+  (:require [zetta.parser.macros :refer [<*]]))
 
 (deftest fmap-applicative-functor-test
   (let [a-monad (<$> str

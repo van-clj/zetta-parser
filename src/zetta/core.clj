@@ -1,9 +1,6 @@
 (ns zetta.core
   (:require [monads.macros :as monad-macro])
-  (:require [monads.core :as monad]
-            [clojure.algo.monads
-             :refer
-             [defmonad defmonadfn domonad with-monad m-seq]])
+  (:require [monads.core :as monad])
   ^:clj (:import [clojure.lang IFn]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -115,11 +112,7 @@
 
 (defrecord Parser [f]
   IFn
-  ;; (invoke [this_ a] (println "1) ERROR: " a))
-  ;; (invoke [this_ a b] (println "2)ERROR: " a b))
-  ;; (invoke [this_ a b c] (println "3) ERROR: " a b c))
   (invoke [this_ input0 more0 err-fn ok-fn]
-    ;; (println "4)" input0 more0 err-fn ok-fn)
     (f input0 more0 err-fn ok-fn))
 
   ^:clj
@@ -208,27 +201,9 @@
                (p2 input1 more1 err-fn0 ok-fn))]
        (p1 input0 more0 err-fn ok-fn)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; ## Parser building macros
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (def parser-monad always)
 (def dummy-parser (parser-monad nil))
 
-;; TODO: How do we translate this to ProtocolMonads?
-(defmacro with-parser
-  "Allows the use of monadic functions m-bind and m-result which are
-  binded to the parser-m monad."
-  [& forms]
-  `(with-monad parser-m ~@forms))
-
-(defmacro do-parser
-  "Allows the use of 'domonad' statements with the m-bind and m-result
-  functions binded to the parser-m monad."
-  [steps result]
-  `(monad-macro/do always ~steps ~result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -297,33 +272,11 @@
   [p f]
   (bind-parsers p f))
 
-(defn- bind-ignore-step
+(defn bind-ignore-step
   "Internal function used by the `>>` macro."
   [mresult p1]
   `(>>= ~mresult (fn [~'_]
    ~p1)))
-
-(defmacro >>
-  "Composes two or more parsers returning the result of the rightmost one."
-  [& more]
-  (reduce bind-ignore-step more))
-
-;; ### Haskell's applicative operators
-
-(defmacro *>
-  "Composes two or more parsers, returning the result value of the rightmost
-  one."
-  [& more]
-  `(>> ~@more))
-
-(defmacro <*
-  "Composes two or more parsers, returning the result of the leftmost one."
-  [& more]
-  (let [step (first more)
-        steps (rest more)]
-  `(>>= ~step (fn [~'result#]
-   (>> ~(reduce bind-ignore-step steps)
-        (always ~'result#))))))
 
 (defn <$>
   "Maps the function f to the results of the given parsers, applicative
