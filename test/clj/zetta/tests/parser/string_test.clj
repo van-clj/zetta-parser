@@ -1,8 +1,8 @@
-(ns zetta.tests.parser.string
-  (:use clojure.test)
-
-  (:use zetta.core)
-  (:require [zetta.parser.string :as p]))
+(ns zetta.tests.parser.string-test
+  (:require
+   [clojure.test :refer :all]
+   [zetta.parser.core :refer :all]
+   [zetta.parser.string :as p]))
 
 (deftest take-with-test
   (let [result (parse-once

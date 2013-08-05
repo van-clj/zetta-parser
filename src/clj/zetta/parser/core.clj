@@ -1,4 +1,4 @@
-(ns zetta.core
+(ns zetta.parser.core
   (:require [monads.macros :as monad-macro])
   (:require [monads.core :as monad])
   ^:clj (:import [clojure.lang IFn]))

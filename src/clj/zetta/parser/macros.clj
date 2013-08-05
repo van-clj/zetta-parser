@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [do])
   (:require
    [monads.macros :as monad-macro]
-   [zetta.core :refer [>>= always]]))
+   [zetta.parser.core :refer [>>= always]]))
 
 (defn- bind-ignore-step
   "Internal function used by the `>>` macro."

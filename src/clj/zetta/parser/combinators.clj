@@ -1,10 +1,10 @@
-(ns zetta.combinators
+(ns zetta.parser.combinators
   (:refer-clojure :exclude [do replicate])
-  (:require [zetta.parser.macros :as macros])
+  (:require [zetta.parser.macros :as zetta-macro])
   (:require ^{:cljs [cls.core :as core]}
             [clojure.core :as core]
             [monads.core :as monad]
-            [zetta.core :refer :all]))
+            [zetta.parser.core :refer :all]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -24,7 +24,7 @@
 (defn many
   "Applies zero or more times a parser p."
   [p]
-  (macros/do
+  (zetta-macro/do
     [h (<|> p (always []))
     :if (= h [])
     :then [ result (always []) ]
@@ -57,14 +57,14 @@
   "Combinator that will apply the parser 'content' in between the parser
   'sep.'"
   [sep content]
-  (macros/*> sep (macros/<* content sep)))
+  (zetta-macro/*> sep (zetta-macro/<* content sep)))
 
 (defn sep-by1
   "Applies one or more times the parser p separated by parser s."
   [p s]
   (<$> cons
        p
-       (<|> (macros/*> s (sep-by1 p s))
+       (<|> (zetta-macro/*> s (sep-by1 p s))
             (always []))))
 
 (defn sep-by
@@ -72,14 +72,14 @@
   [p s]
   (<|> (<$> cons
             p
-            (<|> (macros/*> s (sep-by1 p s))
+            (<|> (zetta-macro/*> s (sep-by1 p s))
                  (always [])))
        (always [])))
 
 (defn many-till
   "Applies the parser p zero or more times until the parser end is successful."
   [p end]
-  (<|> (macros/*> end (always []))
+  (<|> (zetta-macro/*> end (always []))
        (>>= p (fn [h]
        (>>= (many-till p end) (fn [t]
        (always (cons h t))))))))
@@ -87,10 +87,10 @@
 (defn skip-many
   "Skip zero or more applications of parser p."
   [p]
-  (<|> (macros/*> p (skip-many p))
+  (<|> (zetta-macro/*> p (skip-many p))
        (always nil)))
 
 (defn skip-many1
   "Skip one or more applications of parser p."
   [p]
-  (macros/*> p (skip-many p)))
+  (zetta-macro/*> p (skip-many p)))

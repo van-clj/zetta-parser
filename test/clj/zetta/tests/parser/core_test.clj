@@ -1,6 +1,6 @@
-(ns zetta.tests.core
+(ns zetta.tests.parser.core-test
   (:require [clojure.test :refer :all]
-            [zetta.core :refer :all]
+            [zetta.parser.core :refer :all]
             [zetta.parser.seq :as p])
   (:require [zetta.parser.macros :refer [<*]]))
 

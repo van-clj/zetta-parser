@@ -1,7 +1,8 @@
-(ns zetta.tests.parser.seq
-  (:use clojure.test)
-  (:use zetta.core)
-  (:require [zetta.parser.seq :as p]))
+(ns zetta.tests.parser.seq-test
+  (:require
+   [clojure.test :refer :all]
+   [zetta.parser.core :refer :all]
+   [zetta.parser.seq :as p]))
 
 (deftest ^:refactoring satisfy?-test
   (let [result (parse-once (p/satisfy? #(= 0 (mod % 2)))
