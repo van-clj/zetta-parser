@@ -2,7 +2,13 @@
   (:refer-clojure :exclude [do])
   (:require
    [monads.macros :as monad-macro]
-   [zetta.core :refer [>>= always bind-ignore-step]]))
+   [zetta.core :refer [>>= always]]))
+
+(defn- bind-ignore-step
+  "Internal function used by the `>>` macro."
+  [mresult p1]
+  `(>>= ~mresult (fn [~'_]
+   ~p1)))
 
 (defmacro do
   "Allows the use of 'domonad' statements with the m-bind and m-result

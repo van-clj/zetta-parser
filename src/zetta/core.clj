@@ -110,7 +110,7 @@
 (declare fail-parser)
 (declare join-parsers)
 
-(defrecord Parser [f]
+(deftype Parser [f]
   IFn
   (invoke [this_ input0 more0 err-fn ok-fn]
     (f input0 more0 err-fn ok-fn))
@@ -267,16 +267,9 @@
 
 ;; ### Haskell's monad operators
 
-(defn >>=
+(def >>=
   "Alias for bind-parsers function."
-  [p f]
-  (bind-parsers p f))
-
-(defn bind-ignore-step
-  "Internal function used by the `>>` macro."
-  [mresult p1]
-  `(>>= ~mresult (fn [~'_]
-   ~p1)))
+  bind-parsers)
 
 (defn <$>
   "Maps the function f to the results of the given parsers, applicative
