@@ -1,9 +1,11 @@
 (ns zetta.parser.string
   (:refer-clojure :exclude [take take-while])
-  (:require [clojure.core :as core]
-            [clojure.string :as str]
-            [zetta.parser.core :refer :all]
-            [zetta.parser.seq :as pseq]))
+  (:require
+   ^{:cljs [cljs.core :as core]}
+   [clojure.core :as core]
+   [clojure.string :as str]
+   [zetta.parser.core :refer [<$>]]
+   [zetta.parser.seq :as pseq]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

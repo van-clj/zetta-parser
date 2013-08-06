@@ -1,5 +1,5 @@
 (ns zetta.parser.core
-  (:require [monads.macros :as monad-macro])
+  ^:cljs-macro (:require [monads.macros :as monad-macro])
   (:require [monads.core :as monad])
   ^:clj (:import [clojure.lang IFn]))
 
@@ -112,7 +112,7 @@
 
 (deftype Parser [f]
   IFn
-  (invoke [this_ input0 more0 err-fn ok-fn]
+  (^{:cljs -invoke} invoke [this_ input0 more0 err-fn ok-fn]
     (f input0 more0 err-fn ok-fn))
 
   ^:clj
@@ -227,7 +227,7 @@
   "This is parser is used to return continuations (when there is not
   enough input available for the parser to either succeed or fail)."
   (Parser.
-   (fn prompt [input0 _more0 err-fn ok-fn]
+   (fn inner-prompt [input0 _more0 err-fn ok-fn]
      (with-meta
        (fn [new-input]
          (if (empty? new-input)
@@ -283,7 +283,7 @@
   [f & more]
   (bind-parsers
    (monad/seq always more)
-   (fn [params]
+   (fn functor-application [params]
      (always (apply f params)))))
 
 (def <|>

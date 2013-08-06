@@ -1,129 +1,134 @@
 (ns zetta.tests.parser.combinators-test
+  ^:cljs-macro
   (:require
-   [clojure.test :refer :all]
-   [zetta.parser.core :refer :all]
+   [^{:cljs buster-cljs.macros}
+    buster-cljs.clojure :refer [deftest it is]])
+  (:require
+   [zetta.parser.core :as z]
    [zetta.parser.seq :as p]
    [zetta.parser.combinators :as c]))
 
-(deftest many-test
-  (let [result (parse-once (c/many p/digit)
+(deftest combinators
+
+  (it "many"
+    (let [result (z/parse-once (c/many p/digit)
                              "12345")]
-  (is (= [\1 \2 \3 \4 \5] (:result result)))))
+      (is (= [\1 \2 \3 \4 \5] (:result result)))))
 
-(deftest many-no-inital-match-test
-  (let [result (parse-once (c/many p/digit)
+  (it "many no inital match"
+    (let [result (z/parse-once (c/many p/digit)
                              "")]
-  (is (not (failure? result)))))
+      (is (not (z/failure? result)))))
 
-(deftest many1-test
-  (let [result (parse-once (c/many1 p/digit)
+  (it "many1"
+    (let [result (z/parse-once (c/many1 p/digit)
                              "12345")]
-  (is (= [\1 \2 \3 \4 \5] (:result result)))))
+      (is (= [\1 \2 \3 \4 \5] (:result result)))))
 
-(deftest many1-no-inital-match-test
-  (let [result (parse-once (c/many1 p/digit)
+  (it "many1 no inital match"
+    (let [result (z/parse-once (c/many1 p/digit)
                              "")]
-  (is (failure? result))))
+      (is (z/failure? result))))
 
-(deftest sep-by1-test
-  (let [result (parse-once (c/sep-by1 p/digit p/space)
+  (it "sep-by1"
+    (let [result (z/parse-once (c/sep-by1 p/digit p/space)
                              "5 4 3 2")]
-  (is (= [\5 \4 \3 \2] (:result result)))))
+      (is (= [\5 \4 \3 \2] (:result result)))))
 
-(deftest choice-test
-  (let [result (parse-once
-                 (c/many (c/choice [p/digit p/letter]))
-                 "a43bc2f")]
-  (is (done? result))
-  (is (= [\a \4 \3 \b \c \2 \f] (:result result)))))
+  (it "choice"
+    (let [result (z/parse-once
+                  (c/many (c/choice [p/digit p/letter]))
+                  "a43bc2f")]
+      (is (z/done? result))
+      (is (= [\a \4 \3 \b \c \2 \f] (:result result)))))
 
-(deftest choice-no-initial-match-test
-  (let [result (parse-once
-                 (c/choice [p/digit p/letter])
-                 "@&3bc2f")]
-  (is (failure? result))))
+  (it "choice no initial match"
+    (let [result (z/parse-once
+                  (c/choice [p/digit p/letter])
+                  "@&3bc2f")]
+      (is (z/failure? result))))
 
-(deftest replicate-test
-  (let [result (parse-once
-                 (c/replicate 5 p/digit)
-                 "123456")]
-  (is (done? result))
-  (is (= [\1 \2 \3 \4 \5] (:result result))
-  (is (= [\6] (:remainder result))))))
+  (it "replicate"
+    (let [result (z/parse-once
+                  (c/replicate 5 p/digit)
+                  "123456")]
+      (is (z/done? result))
+      (is (= [\1 \2 \3 \4 \5] (:result result))
+          (is (= [\6] (:remainder result))))))
 
-(deftest replicate-no-initial-match-test
-  (let [result (parse-once
-                 (c/replicate 5 p/digit)
-                 "1234abc")]
-  (is (failure? result))
-  (is (= [\a \b \c] (:remainder result)))))
+  (it "replicate no initial match"
+    (let [result (z/parse-once
+                  (c/replicate 5 p/digit)
+                  "1234abc")]
+      (is (z/failure? result))
+      (is (= [\a \b \c] (:remainder result)))))
 
-(deftest option-test
-  (let [result (parse-once
-                 (c/option \y p/letter)
-                 "a")]
-  (is (= \a (:result result)))))
+  (it "option"
+    (let [result (z/parse-once
+                  (c/option \y p/letter)
+                  "a")]
+      (is (= \a (:result result)))))
 
-(deftest option-no-initial-match-test
-  (let [result (parse-once
-                 (c/option \y p/letter)
-                 "1")]
-  (is (done? result))
-  (is (= \y (:result result)))))
+  (it "option no initial match"
+    (let [result (z/parse-once
+                  (c/option \y p/letter)
+                  "1")]
+      (is (z/done? result))
+      (is (= \y (:result result)))))
 
 
-(deftest sep-by-1-no-initial-match-test
-  (let [result (parse-once (c/sep-by1 p/digit p/space)
+  (it "sep-by1 no initial match"
+    (let [result (z/parse-once (c/sep-by1 p/digit p/space)
                              "")]
-  (is (failure? result))))
+      (is (z/failure? result))))
 
-(deftest sep-by-test
-  (let [result (parse-once (c/sep-by p/digit p/space)
+  (it "sep-by"
+    (let [result (z/parse-once (c/sep-by p/digit p/space)
                              "5 4 3 2")]
-  (is (= [\5 \4 \3 \2] (:result result)))))
+      (is (= [\5 \4 \3 \2] (:result result)))))
 
-(deftest sep-by-test-no-initial-match-test
-  (let [result (parse-once (c/sep-by p/digit p/space)
+  (it "sep-by no initial match test"
+    (let [result (z/parse-once (c/sep-by p/digit p/space)
                              "")]
-  (is (not (failure? result)))
-  (is (= [] (:result result)))))
+      (is (not (z/failure? result)))
+      (is (= [] (:result result)))))
 
-(deftest many-till-test
-  (let [result (parse-once
-                 (c/many-till p/letter (p/char \@))
-                 "hello@domain.com")]
-  (is (= [\h \e \l \l \o] (:result result)))))
+  (it "many-till"
+    (let [result (z/parse-once
+                  (c/many-till p/letter (p/char \@))
+                  "hello@domain.com")]
+      (is (= [\h \e \l \l \o] (:result result)))))
 
-(deftest many-till-no-initial-match-test
-  (let [result (parse-once
-                 (c/many-till p/letter (p/char \@))
-                 "@domain.com")]
-  (is (done? result))
-  (is (= [] (:result result)))))
+  (it "many-till no initial match"
+    (let [result (z/parse-once
+                  (c/many-till p/letter (p/char \@))
+                  "@domain.com")]
+      (is (z/done? result))
+      (is (= [] (:result result)))))
 
-(deftest skip-many-test
-  (let [result (parse-once
-                (c/skip-many p/letter)
-                "abc123")]
-  (is (done? result))
-  (is (= [\1 \2 \3] (:remainder result)))))
+  (it "skip-many"
+    (let [result (z/parse-once
+                  (c/skip-many p/letter)
+                  "abc123")]
+      (is (z/done? result))
+      (is (= [\1 \2 \3] (:remainder result)))))
 
-(deftest skip-many-no-initial-match-test
-  (let [result (parse-once
-                (c/skip-many p/letter)
-                "123")]
-  (is (done? result))
-  (is (= [\1 \2 \3] (:remainder result)))))
+  (it "skip-many no initial match"
+    (let [result (z/parse-once
+                  (c/skip-many p/letter)
+                  "123")]
+      (is (z/done? result))
+      (is (= [\1 \2 \3] (:remainder result)))))
 
-(deftest skip-many1-test
-  (let [result (parse-once
-                (c/skip-many1 p/letter)
-                "abc123")]
-  (is (done? result))
-  (is (= [\1 \2 \3] (:remainder result)))))
+  (it "skip-many1"
+    (let [result (z/parse-once
+                  (c/skip-many1 p/letter)
+                  "abc123")]
+      (is (z/done? result))
+      (is (= [\1 \2 \3] (:remainder result)))))
 
-(deftest skip-many1-no-initial-match-test
-  (let [result (parse-once
-                (c/skip-many1 p/letter)
-                "123")]
-  (is (failure? result))))
+  (it "skip-many1 no initial match"
+    (let [result (z/parse-once
+                  (c/skip-many1 p/letter)
+                  "123")]
+      (is (z/failure? result)))))

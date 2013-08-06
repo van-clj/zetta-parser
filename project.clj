@@ -11,7 +11,7 @@
                  [com.birdseye-sw/buster-cljs "0.1.2"]]
 
   :plugins [[lein-cljsbuild "0.3.2"]
-            [com.birdseye-sw/lein-dalap "0.1.1"]]
+            [com.birdseye-sw/lein-dalap "0.1.2-SNAPSHOT"]]
 
   :hooks [leiningen.dalap]
 
@@ -24,11 +24,11 @@
 
   :cljsbuild
   {:builds
-   {:id "browser-test"
-    :compiler
-    {:target :browser
+   [{:id "browser-test"
      :source-paths ["src/cljs" "test/cljs"]
-     :output-to "resources/js/zetta-parser-browser-test.js"
-     :externs ["externs/buster.js"]
-     :optimizations :whitespace
-     :pretty-print true}}})
+     :compiler
+     {:target :browser
+      :output-to "resources/js/zetta-parser-browser-test.js"
+      :externs ["externs/buster.js"]
+      :optimizations :whitespace
+      :pretty-print true}}]})
