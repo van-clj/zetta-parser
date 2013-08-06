@@ -1,19 +1,18 @@
 (ns zetta.examples.clojure
   ^{:doc "A parser for a subset of Clojure"}
   (:refer-clojure :exclude [char])
-  (:require [clojure.core :as core]
-            [clojure.string :as str]
-            [clojure.java.io :as io]
-            [zetta.core :as z])
-
-  (:use [zetta.core :only [<$> <* *>]])
-  (:use
-    [zetta.combinators
-      :only
-      [sep-by around many many1 choice]]
-    [zetta.parser.seq
-      :only
-      [string char not-char number whitespace]]))
+  (:require [zetta.parser.macros :refer [<* *>]])
+  (:require
+   [clojure.core :as core]
+   [clojure.string :as str]
+   [clojure.java.io :as io]
+   [zetta.parser.core :refer [<$>]]
+   [zetta.parser.core :as z]
+   [zetta.parser.combinators :refer
+    [sep-by around many many1 choice]]
+   [zetta.parser.seq
+    :refer
+    [string char not-char number whitespace]]))
 
 (def whitespaces
   (many whitespace))
