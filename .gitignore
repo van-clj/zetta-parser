@@ -10,3 +10,6 @@
 docs/*
 autodoc/**
 /target
+node_modules/
+resources/js/zetta-parser-browser-test.js
+resources/js/zetta-parser-node-test.js
