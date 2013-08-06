@@ -1,12 +1,14 @@
 (ns zetta.tests.parser.combinators-test
   ^:cljs-macro
   (:require
-   [^{:cljs buster-cljs.macros}
-    buster-cljs.clojure :refer [deftest it is]])
+   ^{:cljs [buster-cljs.macros :refer [initialize-buster deftest it is]]}
+   [buster-cljs.clojure :refer [deftest it is]])
   (:require
    [zetta.parser.core :as z]
    [zetta.parser.seq :as p]
    [zetta.parser.combinators :as c]))
+
+#_(:cljs (initialize-buster))
 
 (deftest combinators
 

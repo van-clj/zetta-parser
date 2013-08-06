@@ -1,12 +1,14 @@
 (ns zetta.tests.parser.core-test
   ^:cljs-macro
   (:require
-   [^{:cljs buster-cljs.macros}
-    buster-cljs.clojure :refer [deftest it is]]
+   ^{:cljs [buster-cljs.macros :refer [initialize-buster deftest it is]]}
+   [buster-cljs.clojure :refer [deftest it is]]
    [zetta.parser.macros :refer [<*]])
   (:require
    [zetta.parser.core :refer [<$> parse-once]]
    [zetta.parser.seq :as p]))
+
+#_(:cljs (initialize-buster))
 
 (deftest fmap-applicative-functor-test
   (it "works correctly"

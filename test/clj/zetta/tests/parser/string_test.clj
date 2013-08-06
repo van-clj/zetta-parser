@@ -1,12 +1,15 @@
 (ns zetta.tests.parser.string-test
   ^:cljs-macro
   (:require
-   [^{:cljs buster-cljs.macros}
-    buster-cljs.clojure :refer [deftest it is]])
+   ^{:cljs [buster-cljs.macros :refer [initialize-buster deftest it is]]}
+   [buster-cljs.clojure :refer [deftest it is]])
   (:require
    #_(:cljs [goog.string :as _gstring])
    [zetta.parser.core :refer [parse-once done? failure?]]
    [zetta.parser.string :as p]))
+
+
+#_(:cljs (initialize-buster))
 
 (deftest string-parser
 

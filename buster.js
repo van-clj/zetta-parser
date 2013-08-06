@@ -9,5 +9,5 @@ config['Browser Tests'] = {
 config['Node Tests'] = {
     environment: 'node',
     sources: [],
-    tests: []
+    tests: [ "resources/js/zetta-parser-node-test.js" ]
 };

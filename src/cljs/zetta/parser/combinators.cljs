@@ -1,6 +1,6 @@
 ;; This file was generated with lein-dalap from
 ;;
-;; src/clj/zetta/parser/combinators.clj @ Mon Aug 05 23:13:58 PDT 2013
+;; src/clj/zetta/parser/combinators.clj @ Tue Aug 06 00:02:50 PDT 2013
 ;;
 (ns zetta.parser.combinators (:refer-clojure :exclude [replicate]) (:require-macros [zetta.parser.macros :as zm]) (:require [cljs.core :as c] [zetta.parser.core :refer [Parser]] [zetta.parser.core :as z] [monads.core :as monad]))
 (defn <?> "Allows to add an error message to a given parser p." [p err-msg] (Parser. (fn -inner-<?> [input0 more0 err-fn0 ok-fn] (letfn [(err-fn [input0 more0 errors msg] (fn* [] (err-fn0 input0 more0 (conj errors err-msg) msg)))] (p input0 more0 err-fn0 ok-fn)))))

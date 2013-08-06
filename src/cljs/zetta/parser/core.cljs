@@ -1,6 +1,6 @@
 ;; This file was generated with lein-dalap from
 ;;
-;; src/clj/zetta/parser/core.clj @ Mon Aug 05 23:13:58 PDT 2013
+;; src/clj/zetta/parser/core.clj @ Tue Aug 06 00:02:50 PDT 2013
 ;;
 (ns zetta.parser.core (:require-macros [monads.macros :as monad-macro]) (:require [monads.core :as monad]))
 (defrecord ResultDone [remainder result])
@@ -28,9 +28,9 @@
 (def dummy-parser (parser-monad nil))
 (defn- failure-fn "The initial `err-fn` for all parsers that are executed on the zetta-parser\n  library." [input0 _more0 stack msg] (ResultFailure. input0 stack msg))
 (defn- success-fn "The initial `ok-fn` for all parsers that are executed on the zetta-parser\n  library." [input0 _more0 result] (ResultDone. input0 result))
-(def prompt "This is parser is used to return continuations (when there is not\n  enough input available for the parser to either succeed or fail)." (Parser. (fn prompt [input0 _more0 err-fn ok-fn] (with-meta (fn [new-input] (if (empty? new-input) (p-trampoline err-fn input0 complete) (p-trampoline ok-fn (concat input0 (seq new-input)) incomplete))) {:stop true}))))
+(def prompt "This is parser is used to return continuations (when there is not\n  enough input available for the parser to either succeed or fail)." (Parser. (fn inner-prompt [input0 _more0 err-fn ok-fn] (with-meta (fn [new-input] (if (empty? new-input) (p-trampoline err-fn input0 complete) (p-trampoline ok-fn (concat input0 (seq new-input)) incomplete))) {:stop true}))))
 (defn parse "Uses the given parser to process the input, this function may return a\n  result that could either be a success, a failure, or a continuation that\n  will require more input in other to finish. The parser continuation\n  will halt as soon as an empty seq is given." [parser input] (p-trampoline parser (seq input) incomplete failure-fn success-fn))
 (defn parse-once "Uses the given parser to process the input, this may return a result that\n  could either be a success or failure result (All input must be available\n  at once when using this function)." [parser input] (let [result (parse parser input)] (if (partial? result) (result "") result)))
 (def >>= "Alias for bind-parsers function." bind-parsers)
-(defn <$> "Maps the function f to the results of the given parsers, applicative\n  functor result is going to be a parameter for function f.\n\n  Example:\n\n    (<$> + number number)\n\n  Where `number` is a parser that will return a number from the parsed input." [f & more] (bind-parsers (monad/seq always more) (Parser. (fn functor-application [params] (always (apply f params))))))
+(defn <$> "Maps the function f to the results of the given parsers, applicative\n  functor result is going to be a parameter for function f.\n\n  Example:\n\n    (<$> + number number)\n\n  Where `number` is a parser that will return a number from the parsed input." [f & more] (bind-parsers (monad/seq always more) (fn functor-application [params] (always (apply f params)))))
 (def <|> "Alias for join-parsers function." join-parsers)

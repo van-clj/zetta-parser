@@ -31,4 +31,20 @@
       :output-to "resources/js/zetta-parser-browser-test.js"
       :externs ["externs/buster.js"]
       :optimizations :whitespace
+      :pretty-print true}}
+    {:id "browser-optimized-test"
+     :source-paths ["src/cljs" "test/cljs"]
+     :compiler
+     {:target :browser
+      :output-to "resources/js/zetta-parser-browser-test.js"
+      :externs ["externs/buster.js"]
+      :optimizations :advanced
+      :pretty-print false}}
+    {:id "node-test"
+     :source-paths ["src/cljs" "test/cljs"]
+     :compiler
+     {:target :node
+      :output-to "resources/js/zetta-parser-node-test.js"
+      :externs ["externs/buster.js"]
+      :optimizations :simple
       :pretty-print true}}]})

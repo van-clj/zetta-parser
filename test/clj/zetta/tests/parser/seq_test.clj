@@ -1,13 +1,14 @@
 (ns zetta.tests.parser.seq-test
   ^:cljs-macro
   (:require
-   [^{:cljs buster-cljs.macros}
-    buster-cljs.clojure :refer [deftest describe it is]])
+   ^{:cljs [buster-cljs.macros :refer [initialize-buster deftest it is]]}
+   [buster-cljs.clojure :refer [deftest it is]])
   (:require
    #_(:cljs [goog.string :as _gstring])
    [zetta.parser.core :refer [parse-once failure? done?]]
-   [zetta.parser.seq :as p])
-  )
+   [zetta.parser.seq :as p]))
+
+#_(:cljs (initialize-buster))
 
 (defn is-digit
   [n]
