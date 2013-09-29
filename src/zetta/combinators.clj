@@ -18,7 +18,7 @@
     (letfn [
       (err-fn [input0 more0 errors msg]
         #(err-fn0 input0 more0 (conj errors err-msg) msg))]
-    (p input0 more0 err-fn0 ok-fn))))
+    (p input0 more0 err-fn ok-fn))))
 
 (defn many
   "Applies zero or more times a parser p."
