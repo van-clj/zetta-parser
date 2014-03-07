@@ -5,6 +5,16 @@
   (:require [zetta.parser.seq :as p]
             [zetta.combinators :as c]))
 
+(deftest <?>-test-success
+  (let [result (parse-once (c/<?> p/digit "test-failure") "1")]
+    (is (not (failure? result)))
+    (is (= \1 (:result result)))))
+
+(deftest <?>-test-failure
+  (let [result (parse-once (c/<?> p/digit  "test-failure") "A")]
+    (is (failure? result))
+    (is (= ["test-failure"] (:stack result)))))
+
 (deftest many-test
   (let [result (parse-once (c/many p/digit)
                              "12345")]
