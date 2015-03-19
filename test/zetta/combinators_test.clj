@@ -1,4 +1,4 @@
-(ns zetta.tests.combinators
+(ns zetta.combinators-test
   (:require
    [clojure.test :refer :all]
    [zetta.core :refer :all]

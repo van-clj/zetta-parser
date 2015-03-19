@@ -1,4 +1,4 @@
-(ns zetta.tests.core
+(ns zetta.core-test
   (:require
    [clojure.test :refer :all]
    [zetta.core :refer :all]

@@ -1,4 +1,4 @@
-(ns zetta.tests.parser.string
+(ns zetta.parser.string-test
   (:require
    [clojure.test :refer :all]
    [zetta.core :refer :all]
