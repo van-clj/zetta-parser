@@ -5,7 +5,8 @@
 /native
 /.lein-failures
 /checkouts
-/.lein-deps-sum
+/.lein-*
+/.nrepl-*
 docs/*
 autodoc/**
 /target
