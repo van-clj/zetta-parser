@@ -1,9 +1,0 @@
-= Roman Gonzalez (No release date)
-	* Fix bug on the number parser, (wasn't parsing one digit numbers)
-	* Reimplemented the `many` parser combinator to reduce StackOverflows
-	* Reimplemented CPS functions to be executed using trampoline (massive
-	reduction of StackOverflow errors)
-	* Improved documentation of functions, added missing documentation in some
-	others
-	* Improved considerably the performance by adding type hints
-	* Added marginalia to the dev-dependencies
