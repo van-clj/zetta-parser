@@ -1,7 +1,10 @@
 (ns zetta.core
-  (:use [clojure.algo.monads
-         :only
-         [defmonad defmonadfn domonad with-monad m-seq]]))
+  (:require
+   [monads.core :refer [defmonad mdo return run-mdo run-monad >>= >>]]
+   [monads.util :refer [sequence-m]]
+   [monads.types :as types]))
+
+(declare parser-m)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -101,10 +104,27 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; ## Basic parsers primitives
+;; ## Parser building macros
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defmacro with-parser
+  "Allows the use of monadic functions bind and return which are
+  binded to the parser-m monad."
+  [& forms]
+  `(run-monad parser-m ~@forms))
+
+(defmacro do-parser
+  "Allows the use of 'run-mdo' statements with the bind and return
+  functions binded to the parser-m monad."
+  [& body]
+  `(run-mdo parser-m ~@body))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; ## Basic parsers primitives
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; ### Parsers will be functions that receive 4 parameters:
 ;;
@@ -121,7 +141,8 @@
   will be shown on the final result."
   [msg]
   (fn failed-parser [input0 more0 err-fn _ok-fn]
-    #(err-fn input0 more0 [] (str "Failed reading: " msg))))
+    (let [err-msg (str "failed reading: " msg)]
+      #(err-fn input0 more0 [err-msg] err-msg))))
 
 (defn always
   "Returns a parser that will always succeed, this parser will return the
@@ -152,15 +173,15 @@
 
   Example:
 
-    ; Parses either the character a or the character b
+    ;; Parses either the character a or the character b
     (join-parsers (char \\a) (char \\b))
   "
   [p1 p2]
   (fn m-plus-parser [input0 more0 err-fn0 ok-fn]
-                 (letfn [
-                   (err-fn [input1 more1 _ _]
-                     (p2 input1 more1 err-fn0 ok-fn))]
-                 (p1 input0 more0 err-fn ok-fn))))
+    (letfn [
+            (err-fn [input1 more1 _ _]
+              ((with-parser p2) input1 more1 err-fn0 ok-fn))]
+      ((with-parser p1) input0 more0 err-fn ok-fn))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -169,34 +190,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmonad parser-m
-  [ m-result (fn result-fn [a]
-               (always a))
+  (mreturn [_ v] (always v))
+  (bind [m mv f]
+        (bind-parsers mv #(run-monad m (f %))))
 
-    m-bind   (fn bind-fn [p f]
-               (bind-parsers p f))
+  types/MonadFail
+  (fail [m err] (fail-parser err))
 
-    m-zero   (fail-parser "m-zero")
-
-    m-plus   (fn m-plus-fn [p1 p2]
-               (join-parsers p1 p2))])
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;; ## Parser building macros
-;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defmacro with-parser
-  "Allows the use of monadic functions m-bind and m-result which are
-  binded to the parser-m monad."
-  [& forms]
-  `(with-monad parser-m ~@forms))
-
-(defmacro do-parser
-  "Allows the use of 'domonad' statements with the m-bind and m-result
-  functions binded to the parser-m monad."
-  [steps result]
-  `(domonad parser-m ~steps ~result))
+  types/MonadPlus
+  (mzero [m] (fail-parser "mzero"))
+  (mplus [_ lr]
+         (join-parsers (first lr) (second lr))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -257,12 +261,7 @@
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ### Haskell's monad operators
-
-(defn >>=
-  "Alias for bind-parsers function."
-  [p f]
-  (bind-parsers p f))
+;; ### Haskell's applicative operators
 
 (defn- bind-ignore-step
   "Internal function used by the `>>` macro."
@@ -270,27 +269,21 @@
   `(>>= ~mresult (fn [~'_]
    ~p1)))
 
-(defmacro >>
+(defmacro *>
   "Composes two or more parsers returning the result of the rightmost one."
   [& more]
-  (reduce bind-ignore-step more))
-
-;; ### Haskell's applicative operators
-
-(defmacro *>
-  "Composes two or more parsers, returning the result value of the rightmost
-  one."
-  [& more]
-  `(>> ~@more))
+  `(with-parser
+    ~(reduce bind-ignore-step more)))
 
 (defmacro <*
   "Composes two or more parsers, returning the result of the leftmost one."
   [& more]
   (let [step (first more)
         steps (rest more)]
-  `(>>= ~step (fn [~'result#]
-   (>> ~(reduce bind-ignore-step steps)
-        (always ~'result#))))))
+    `(with-parser
+       (>>= ~step (fn [~'result#]
+                    (>> ~(reduce >> steps)
+                        (return ~'result#)))))))
 
 (defn <$>
   "Maps the function f to the results of the given parsers, applicative
@@ -302,9 +295,9 @@
 
   Where `number` is a parser that will return a number from the parsed input."
   [f & more]
-  (with-parser
-    (m-bind (m-seq more) (fn [params]
-    (m-result (apply f params))))))
+  (do-parser
+   params <- (sequence-m more)
+   (return (apply f params))))
 
 (def <|>
   "Alias for join-parsers function."

@@ -1,9 +1,9 @@
 (ns zetta.combinators
   (:refer-clojure :exclude [replicate])
-  (:require [clojure.core :as core])
-  (:use [clojure.algo.monads :only [m-seq]])
-
-  (:use zetta.core))
+  (:require [clojure.core :as core]
+            [monads.core :refer [mplus return >> >>=]]
+            [monads.util :refer [sequence-m]]
+            [zetta.core :refer :all]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -17,36 +17,37 @@
   (fn [input0 more0 err-fn0 ok-fn]
     (letfn [
       (err-fn [input0 more0 errors msg]
-        #(err-fn0 input0 more0 (conj errors err-msg) msg))]
+        #(err-fn0 input0 more0 (conj errors err-msg) err-msg))]
     (p input0 more0 err-fn ok-fn))))
 
 (defn many
   "Applies zero or more times a parser p."
   [p]
   (do-parser
-    [h (<|> p (always []))
-    :if (= h [])
-    :then [ result (always []) ]
-    :else [ t (many p)
-            result (always (cons h t)) ]]
-    result))
+   h <- (mplus p (return []))
+   (if (= h [])
+     (return [])
+     (do-parser
+      t <- (many p)
+      (return (cons h t))))))
 
 (defn choice
   "Combinator that tries to parse the input using each of the given parsers,
   it will halt on the first parser that can successfuly parse the input."
   [ps]
-  (reduce <|> ps))
+  (with-parser
+    (reduce mplus ps)))
 
 (defn replicate
   "Apply the given parser 'p' 'n' times, returning every result."
   [n p]
   (with-parser
-    (m-seq (core/replicate n p))))
+    (sequence-m (core/replicate n p))))
 
 (defn option
   "Applies parser p to the input, if p fails then default-val is returned."
   [default-val p]
-  (<|> p (always default-val)))
+  (<|> p (return default-val)))
 
 (defn many1
   "Applies one or more times a parser p."
@@ -65,7 +66,7 @@
   (<$> cons
        p
        (<|> (*> s (sep-by1 p s))
-            (always []))))
+            (return []))))
 
 (defn sep-by
   "Applies zero or more times the parser p separated by parser s."
@@ -73,25 +74,24 @@
   (<|> (<$> cons
             p
             (<|> (*> s (sep-by1 p s))
-                 (always [])))
-       (always [])))
+                 (return [])))
+       (return [])))
 
 (defn many-till
   "Applies the parser p zero or more times until the parser end is successful."
   [p end]
-  (<|> (*> end (always []))
+  (<|> (*> end (return []))
        (>>= p (fn [h]
        (>>= (many-till p end) (fn [t]
-       (always (cons h t))))))))
+       (return (cons h t))))))))
 
 (defn skip-many
   "Skip zero or more applications of parser p."
   [p]
   (<|> (*> p (skip-many p))
-       (always nil)))
+       (return nil)))
 
 (defn skip-many1
   "Skip one or more applications of parser p."
   [p]
   (*> p (skip-many p)))
-

@@ -1,8 +1,7 @@
 (ns zetta.tests.parser.seq
-  (:use clojure.test)
-
-  (:use zetta.core)
-  (:require [zetta.parser.seq :as p]))
+  (:require [clojure.test :refer :all]
+            [zetta.core :refer :all]
+            [zetta.parser.seq :as p]))
 
 
 (deftest satisfy?-test
@@ -157,7 +156,6 @@
 (deftest no-char-set-test
   (let [result (parse-once (p/not-char #{\,}) ",")]
     (is (failure? result))))
-
 (deftest test-double-or-long
   (let [result (parse-once p/double-or-long "123")]
     (is (done? result))
@@ -215,4 +213,3 @@
 (deftest eol-no-initial-match-test
   (let [result (parse-once p/eol "other")]
     (is (failure? result))))
-

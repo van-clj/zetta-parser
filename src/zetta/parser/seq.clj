@@ -2,10 +2,10 @@
   (:refer-clojure
    :exclude [ensure get take take-while char some replicate])
   (:require [clojure.core :as core]
-            [clojure.string :as str])
-
-  (:use zetta.core)
-  (:use zetta.combinators))
+            [clojure.string :as str]
+            [monads.core :refer [lift-m return run-monad >>]]
+            [zetta.core :refer :all]
+            [zetta.combinators :refer :all]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -39,7 +39,7 @@
   "Parser that returns `true` if any input is available either immediately or
   on demand, and `false` if the end of all input has been reached.
 
-  **WARNING**: This parser always succeeds."
+  **WARNING**: This parser return succeeds."
   (fn [input0 more0 _err-fn ok-fn0]
     (cond
       (not (empty? input0)) #(ok-fn0 input0 more0 true)
@@ -56,8 +56,8 @@
   (fn [input0 more0 err-fn ok-fn]
     (if (>= (count input0) n)
       #(ok-fn input0 more0 input0)
-      (with-parser
-        ((>> demand-input (ensure n)) input0 more0 err-fn ok-fn)))))
+      ((run-monad parser-m (>> demand-input (ensure n)))
+       input0 more0 err-fn ok-fn))))
 
 (def get
   "Returns the input given in the `zetta.core/parse` function."
@@ -74,27 +74,22 @@
   `true`. Returns the item that is actually parsed."
   [pred]
   (do-parser
-    [input (ensure 1)
-     :let  [item (first input)]
-     :if (pred item)
-       :then [
-         _ (put (rest input))
-       ]
-       :else [
-        _ (fail-parser "satisfy?")
-       ]]
-    item))
+   input <- (ensure 1)
+   let item = (first input)
+   _ <- (if (pred item)
+          (put (rest input))
+          (fail-parser "satisfy?"))
+   (return item)))
 
 (defn skip
   "Parser that succeeds for any item for which the predicate `pred`, returns
   `nil`."
   [pred]
   (do-parser
-    [input (ensure 1)
-     :if (pred (first input))
-       :then [_ (put (rest input))]
-       :else [_ (fail-parser "skip")]]
-     nil))
+   input <- (ensure 1)
+   (if (pred (first input))
+     (put (rest input))
+     (fail-parser "skip"))))
 
 (defn take-with
   "Parser that matches `n` items of input, but succeed only if the predicate
@@ -102,12 +97,12 @@
   as a seq."
   [n pred]
   (do-parser
-    [input (ensure n)
-     :let [[h t] (split-at n input)]
-     :if (pred h)
-       :then [_ (put t)]
-       :else [_ (fail-parser "take-with")]]
-     h))
+   input <- (ensure n)
+   let [h t] = (split-at n input)
+   _ <- (if (pred h)
+          (put t)
+          (fail-parser "take-with"))
+   (return h)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -133,19 +128,18 @@
 (defn skip-while
   "Parser that skips input for as long as `pred` returns `true`."
   [pred]
-  (let [skip-while-loop (do-parser
-             [input0 get
-              :let [input (drop-while pred input0)]
-              _ (put input)
-              :if (empty? input)
-              :then [
-                input-available? want-input?
-                :if input-available?
-                :then [_ (skip-while pred)]
-                :else []
-              ]
-              :else []]
-              nil)]
+  (let [skip-while-loop
+        (do-parser
+         input0 <- get
+         let input = (drop-while pred input0)
+         _ <- (put input)
+         (if (empty? input)
+           (do-parser
+            input-available? <- want-input?
+            (if input-available?
+              (skip-while pred)
+              (return nil)))
+           (return nil)))]
      skip-while-loop))
 
 (defn take-while
@@ -162,20 +156,21 @@
   (letfn [
     (take-while-loop [acc]
       (do-parser
-        [input0 get
-         :let [[pre post] (span pred input0)]
-         _ (put post)
-         :if (empty? post)
-           :then [
-             input-available? want-input?
-             :if input-available?
-               :then [result (take-while-loop (conj acc pre))]
-               :else [result (always (conj acc pre))]
-           ]
-           :else [result (m-result (conj acc pre))]]
-           result))]
-  (<$> (comp #(apply core/concat %) core/reverse)
-       (take-while-loop []))))
+       input0 <- get
+       let [pre post] = (span pred input0)
+       _ <- (put post)
+       (if (empty? post)
+         (do-parser
+          input-available? <- want-input?
+          (if input-available?
+            (take-while-loop (conj acc pre))
+            ;; else
+            (return (conj acc pre))))
+         ;; else
+         (return (conj acc pre)))))]
+    (with-parser
+      (lift-m (comp #(apply core/concat %) core/reverse)
+              (take-while-loop [])))))
 
 (defn take-till
   "Matches input as long as `pred` returns `false`
@@ -198,17 +193,14 @@
   (letfn [
     (take-rest-loop [acc]
       (do-parser
-        [input-available? want-input?
-         :if input-available?
-           :then [
-             input get
-             _ (put [])
-             result (take-rest-loop (conj acc input))
-           ]
-           :else [
-             result (always (reverse acc))
-           ]]
-          result))]
+       input-available? <- want-input?
+       (if input-available?
+         (do-parser
+          input <- get
+          _ <- (put [])
+          (take-rest-loop (conj acc input)))
+         ;; else
+         (return (reverse acc)))))]
   (take-rest-loop [])))
 
 (defn take-while1
@@ -218,20 +210,23 @@
    This parser will fail if a first match is not accomplished."
   [pred]
   (do-parser
-    [input get
-     :if (empty? input)
-       :then [_ demand-input]
-       :else []
-     input get
-     :let [[pre post] (span pred input)]
-     :if (empty? pre)
-       :then [_ (fail-parser "take-while1")]
-       :else [_ (put post)]
-     :if (empty? post)
-       :then [remainder (take-while pred)
-              result (always (concat pre remainder))]
-       :else [result (always pre)]]
-     result))
+   input <- get
+   _ <- (if (empty? input)
+          demand-input
+          (return nil))
+
+   input <- get
+   let [pre post] = (span pred input)
+   _ <- (if (empty? pre)
+          (fail-parser "take-while1")
+          (put post))
+
+   (if (empty? post)
+     (do-parser
+      remainder <- (take-while pred)
+      (return (concat pre remainder)))
+     ;; else
+     (return pre))))
 
 (def any-token
   "Parser that matches any element from the input seq, it will return the
@@ -249,6 +244,18 @@
     :else
       (<?> (satisfy? #(= % c))
            (str "failed parser char: " c))))
+
+(defn not-char
+  "Parser that matches only an item that is not equal to character `c`, the
+  item is returned."
+  [#^java.lang.Character c]
+  (cond
+    (set? c)
+      (<?> (satisfy? #(not (contains? c %)))
+           (str c))
+    :else
+      (<?> (satisfy? #(not (= % c)))
+           (str c))))
 
 (def whitespace
   "Parser that matches any character that is considered a whitespace, it uses
@@ -273,28 +280,16 @@
   "Parser that skips many whitespaces. Returns `nil`."
   (skip-many whitespace))
 
-(defn not-char
-  "Parser that matches only an item that is not equal to character `c`, the
-  item is returned."
-  [#^java.lang.Character c]
-  (cond
-    (set? c)
-      (<?> (satisfy? #(not (contains? c %)))
-           (str c))
-    :else
-      (<?> (satisfy? #(not (= % c)))
-           (str c))))
-
 (def letter
   "Parser that matches any character that is considered a letter, it uses
   `Character/isLetter` internally. This parser will return the matched
   character."
-
   (satisfy? #(Character/isLetter ^java.lang.Character %)))
 
 (def word
   "Parser that matches a word, e.g `(many1 letter)`, returns the parsed word."
-  (<$> str/join (many1 letter)))
+  (<$> str/join
+       (many1 letter)))
 
 (def digit
   "Parser that matches any character that is considered a digit, it uses
@@ -314,16 +309,16 @@
 (def double-or-long
   (letfn [
     (digit-or-dot []
-      (do-parser [
-        h (<|> digit (char \.))
-        :if (= h \.)
-        :then [ t (many digit) ]
-        :else [ t (<|> (digit-or-dot) (always [])) ]]
-        (cons h t)))]
-  (do-parser [
-    h digit
-    t (<|> (digit-or-dot) (always []))]
-    (cons h t))))
+      (do-parser
+       h <- (join-parsers digit (char \.))
+       t <- (if (= h \.)
+              (many digit)
+              (join-parsers (digit-or-dot) (return [])))
+       (return (cons h t))))]
+    (do-parser
+     h <- digit
+     t <- (join-parsers (digit-or-dot) (return []))
+     (return (cons h t)))))
 
 (def number
   "Parser that matches one or more digit characters and returns a number in
@@ -358,7 +353,5 @@
 (def eol
   "Parser that matches different end-of-line characters/sequences.
   This parser returns a nil value."
-  (<|> (*> (char \newline) (always nil))
-       (*> (string "\r\n") (always nil))))
-
-
+  (<|> (*> (char \newline) (return nil))
+       (*> (string "\r\n") (return nil))))

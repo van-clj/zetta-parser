@@ -1,9 +1,9 @@
 (ns zetta.tests.combinators
-  (:use clojure.test)
-
-  (:use zetta.core)
-  (:require [zetta.parser.seq :as p]
-            [zetta.combinators :as c]))
+  (:require
+   [clojure.test :refer :all]
+   [zetta.core :refer :all]
+   [zetta.parser.seq :as p]
+   [zetta.combinators :as c]))
 
 (deftest <?>-test-success
   (let [result (parse-once (c/<?> p/digit "test-failure") "1")]
@@ -13,7 +13,7 @@
 (deftest <?>-test-failure
   (let [result (parse-once (c/<?> p/digit  "test-failure") "A")]
     (is (failure? result))
-    (is (= ["test-failure"] (:stack result)))))
+    (is (= ["failed reading: satisfy?" "test-failure"] (:stack result)))))
 
 (deftest many-test
   (let [result (parse-once (c/many p/digit)
