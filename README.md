@@ -11,7 +11,7 @@ as `string` and `number` expect to process a stream of characters.
 ## Install
 
 ```clojure
-[org.van-clj/zetta-parser "0.0.4"]
+[org.van-clj/zetta-parser "0.1.0"]
 ```
 
 ## Usage
@@ -45,50 +45,57 @@ through the input.
 
 ```clojure
 (ns example
-  (:use [zetta.core :only (do-parser always)]
-        [zetta.parser.seq :only (space spaces)]
-        [zetta.combinators :only (many-till)]))
+  (:require
+  [zetta.core :refer :all]
+  [zetta.parser.seq :as pseq]
+  [zetta.parser.string :as pstr]
+  [zetta.combinators :as pc]))
 
-; sub parsers that are going to be used
-(def parse-movies ...)
-(def parse-patients ...)
-(def parse-programs ...)
+;; sub parsers that are going to be used
+(def parse-movie ...)
+(def parse-patient ...)
+(def parse-program ...)
 
 (def parse-professional
   (do-parser
-    [_ spaces
-     ; ^ ignore spaces
+    pseq/skip-spaces
 
-     name (many-till space)
-     ; ^ parse many characters until space
+    name <- (pstr/take-till #(Character/isSpace %))
+    ;; ^ assigns name to a string up until a space
 
-     _ spaces
-     ; ^ ignore spaces
+    pseq/skip-spaces
 
-     profession (many-till space)
-     ; ^ parse many characters until space
+    profession <- (pstr/take-till #(Character/isSpace %))
+    ;; ^ assigns profession to a string up until a space
 
-     :cond [
-     ; ^ depending on the profession we might return one thing
-     ; or the other
-       (= profession "actor")
-       [
-         movies parse-movies
-         result (always (Actor. name movies))
-       ]
+    ;; check for profession to change parse strategies
+    ;; dynamically
+    (cond
+      (= profession "actor")
+      (do-parser
+       movies <- (pc/sep-by1 parse-movie (pseq/char \,))
+       ;; ^ parse many movies separated by commas, using
+       ;; the parser of a single movie
+       (always (Actor. name movies)))
 
-       (= profession "doctor")
-       [
-         patients parse-patients
-         result (always (Doctor. name patients))
-       ]
+      (= profession "doctor")
+      (do-parser
+       patients <- (pc/sep-by1 parse-patient (pseq/char \,))
+       ;; ^ parse many patients separated by commas, using
+       ;; the parser of a single patient
+       (always (Doctor. name patients)))
 
-       (= profession "programmer")
-       [
-         programms parse-programs
-         result (always (Programmer. name programs))
-       ]]]
-     result))
+      (= profession "programmer")
+      (do-parser
+       programs <- (pc/sep-by1 parse-program (pseq/char \,))
+       ;; ^ parse many programs separated by commas, using
+       ;; the parser of a single program
+       (always (Programmer. name programs)))
+
+      :else
+      (fail-parser (str "Invalid profession: " profession))
+      ;; ^ fail parser if an invalid profession is given
+      )))
 ```
 
 For more info on how to implement parsers using monadic notations check
@@ -161,37 +168,41 @@ summary of the `zetta.parser.seq` and `zetta.combinators` namespaces.
 ### Parsing a CSV file
 
 ```clojure
-(ns examples.csv
-  (:require [clojure.java.io :as io])
+(ns zetta.examples.csv
+  ^{ :doc "Naive CSV parser" }
+  (:refer-clojure :exclude [char])
+  (:require [clojure.core :as core]
+            [clojure.string :as str]
+            [clojure.java.io :as io]
+            [zetta.core :refer :all]
+            [zetta.combinators
+             :refer [sep-by1 around many many1 choice]]
+            [zetta.parser.seq
+             :refer [char not-char spaces eol end-of-input]]))
 
-  (:use zetta.core)
-  (:require [zetta.combinators :as comb])
-  (:require [zetta.parser.seq :as p]))
+(defrecord CSVFile [titles values])
 
-(defrecord CSVFile [titles, values])
+(def csv-sep
+  (char \,))
 
-(def csv-hash
-  (<$> #(apply hash-map %)
-       (comb/sep-by (comb/many (p/not-char ','))
-                    (<|> (p/char ',')
-                          p/eol))))
+(def csv-key
+  (<$> str/join
+       (many1
+         (around spaces (not-char #{\, \newline})))))
+
+(def csv-entry
+  (<* (sep-by1 csv-key
+               csv-sep)
+       (<|> eol end-of-input)))
 
 (def csv-file
   (<$> #(CSVFile. %1 %2)
-       csv-hash
-       (comb/many csv-hash)))
-
-(defn get-csv-file [path]
-  (-> path
-      io/file
-      io/reader
-      line-seq
-      concat
-      (parse-once csv-file)))
+       csv-entry
+       (many csv-entry)))
 ```
 
 ## License
 
-Copyright (C) 2012, 2013 Roman Gonzalez, Tatsuhiro Ujihisa.
+Copyright (C) 2012-2015 Roman Gonzalez and contributors.
 
 Distributed under the Eclipse Public License, the same as Clojure.
