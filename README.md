@@ -39,9 +39,9 @@ zetta-parser provides several namespaces, each with an specific functionality:
 ### do-parse Notation
 
 do-parse is a macro that will allow you to implement parsers using a monadic
-notation like the one provided by clojure.algo.monads. This kinds of
-parsers are really handy when the behavior of the parser changes as you parse
-through the input.
+notation like the one provided by [bwo monads
+library](https://github.com/bwo/monads). This kinds of parsers are really handy
+when the behavior of the parser changes as you parse through the input.
 
 ```clojure
 (ns example
@@ -97,10 +97,6 @@ through the input.
       ;; ^ fail parser if an invalid profession is given
       )))
 ```
-
-For more info on how to implement parsers using monadic notations check
-[clojure/algo.monads](http://github.com/clojure/algo.monads) info, version
->= 0.1.3 is required.
 
 ### Applicative Functors
 
