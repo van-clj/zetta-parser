@@ -4,35 +4,31 @@
   (:require [clojure.core :as core]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [zetta.core :as z])
-
-  (:use [zetta.core :only [<$> <* *>]])
-  (:use
-    [zetta.combinators
-      :only
-      [sep-by around many many1 choice]]
-    [zetta.parser.seq
-      :only
-      [string char not-char number whitespace]]))
+            [zetta.core :as z
+             :refer [<$> <* *>]]
+            [zetta.combinators
+             :refer [sep-by around many many1 choice]]
+            [zetta.parser.seq
+             :refer [digit string char not-char whitespace]]))
 
 (def whitespaces
   (many whitespace))
 
 (def clojure
   (around
-    whitespaces
-    (choice
-      [(<$> (comp #(Integer/parseInt %) str/join)
-          (many1 number))
-       (<$> str/join ;(comp symbol str/join)
-          (many1 (not-char #{\ \newline \( \) \[ \] \#})))
-       (<$> str/join
+   whitespaces
+   (choice
+    [(<$> (comp #(Integer/parseInt %) str/join)
+          (many1 digit))
+     (<$> (comp symbol str/join)
+          (many1 (not-char #{\ \newline \( \) \[ \] \# \{ \}})))
+     (<$> set
           (*> (string "#{")
-            (<* (sep-by clojure whitespaces) (char \}))))
-       (<$> (partial apply vector)
+              (<* (sep-by clojure whitespaces) (char \}))))
+     (<$> (partial apply vector)
           (*> (char \[)
-            (<* (sep-by clojure whitespaces) (char \]))))
-       (*> (char \()
+              (<* (sep-by clojure whitespaces) (char \]))))
+     (*> (char \()
          (<* (sep-by clojure whitespaces) (char \))))])))
 
 (defn -main []
